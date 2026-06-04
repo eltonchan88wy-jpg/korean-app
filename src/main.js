@@ -21,14 +21,15 @@ function mergeVocab(local, api) {
 //  CONSTANTS
 // ────────────────────────────────────────────────────────────
 const LEVELS_SYSTEM = [
-  { level:1, name:'韩语新手',       icon:'🌱', xp:0    },
-  { level:2, name:'入门学习者',     icon:'📖', xp:100  },
-  { level:3, name:'초보자',         icon:'✏️', xp:250  },
-  { level:4, name:'기초 탈출',      icon:'🎯', xp:500  },
-  { level:5, name:'중급 도전자',    icon:'⚡', xp:900  },
-  { level:6, name:'한국어 마스터',  icon:'🏆', xp:1500 },
-  { level:7, name:'TOPIK 고수',     icon:'👑', xp:2500 },
-  { level:8, name:'원어민 수준',    icon:'🌟', xp:4000 },
+  { level:1, name:'냉면',       icon:'🍜', xp:0    },
+  { level:2, name:'돈까스',     icon:'🍱', xp:100  },
+  { level:3, name:'쌀국수',     icon:'🍲', xp:250  },
+  { level:4, name:'닭갈비',     icon:'🍗', xp:500  },
+  { level:5, name:'비빔밥',     icon:'🥗', xp:900  },
+  { level:6, name:'된장찌개',   icon:'🍵', xp:1500 },
+  { level:7, name:'김치전',     icon:'🥘', xp:2500 },
+  { level:8, name:'김치등갈비', icon:'🍖', xp:4000 },
+  { level:9, name:'갈비찜',     icon:'👑', xp:6000 },
 ];
 
 const TOPIK_INFO = [
@@ -294,7 +295,12 @@ function initAuth() {
           lastActive: firebase.firestore.FieldValue.serverTimestamp(),
         });
       })
-      .then(() => { setAuthLoading(false); showScreen('home'); })
+      .then(() => {
+        setAuthLoading(false);
+        firebase.auth().signOut();
+        State.user = null;
+        $('modal-register-success').classList.remove('hidden');
+      })
       .catch(e => { setAuthLoading(false); showAuthError(authErrMsg(e.code)); });
   };
 
@@ -512,8 +518,7 @@ function showResult(isRight) {
   $('practice-result-word').textContent    = w.korean;
   $('practice-result-meaning').textContent = `${w.meaning}  (${w.rom})`;
   $('practice-example-korean').textContent  = w.example;
-  $('practice-example-chinese').textContent = w.exMeaning;
-  setTimeout(() => speak(w.example, State.speechRate * 0.9), 500);
+  $('practice-example-chinese').textContent = w.exMeaning || '';
 }
 
 function updateSessionStats() {
@@ -717,15 +722,29 @@ function initProfile() {
     list.appendChild(div);
   });
 
+  const changeUsernameBtn = $('profile-change-username-btn');
+  if (changeUsernameBtn) {
+    if (FIREBASE_ENABLED && State.user && !State.user.isGuest) {
+      changeUsernameBtn.classList.remove('hidden');
+      changeUsernameBtn.onclick = () => {
+        $('username-input-new').value = getProfile().username || '';
+        $('username-change-error').classList.add('hidden');
+        $('modal-change-username').classList.remove('hidden');
+      };
+    } else {
+      changeUsernameBtn.classList.add('hidden');
+    }
+  }
+
   const logoutBtn = $('profile-logout-btn');
   if (FIREBASE_ENABLED && State.user && !State.user.isGuest) {
     logoutBtn.classList.remove('hidden');
     logoutBtn.onclick = () => {
-      if (!confirm('确定退出登录？')) return;
-      firebase.auth().signOut().then(() => {
-        State.user = null; State.profile = null; LS.set('profile', null);
-        showScreen('auth');
-      });
+      State.user = null;
+      State.profile = null;
+      localStorage.removeItem('kr_profile');
+      firebase.auth().signOut().catch(e => console.warn('signOut:', e));
+      showScreen('auth');
     };
   } else {
     logoutBtn.classList.add('hidden');
@@ -857,9 +876,37 @@ function bindEvents() {
     showToast('进度已重置！'); showScreen('home');
   });
 
-  // Modal
+  // Modal: level up
   $('modal-close-btn').addEventListener('click', () => {
     $('modal-levelup').classList.add('hidden'); initProfile();
+  });
+
+  // Modal: register success
+  $('modal-register-ok-btn').addEventListener('click', () => {
+    $('modal-register-success').classList.add('hidden');
+    $('auth-tab-login').click();
+    showScreen('auth');
+  });
+
+  // Modal: change username
+  $('modal-username-cancel').addEventListener('click', () => {
+    $('modal-change-username').classList.add('hidden');
+  });
+  $('modal-username-save').addEventListener('click', () => {
+    const newName = $('username-input-new').value.trim();
+    if (!newName || newName.length < 2) {
+      $('username-change-error').textContent = '用户名至少 2 个字符';
+      $('username-change-error').classList.remove('hidden');
+      return;
+    }
+    $('modal-username-save').disabled = true;
+    const p = getProfile();
+    p.username = newName;
+    saveProfile(p);
+    $('modal-change-username').classList.add('hidden');
+    $('modal-username-save').disabled = false;
+    showToast('用户名已更新！');
+    initProfile();
   });
 }
 

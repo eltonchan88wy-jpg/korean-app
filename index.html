@@ -386,6 +386,7 @@
       <div id="profile-level-list"></div>
     </div>
 
+    <button class="btn btn-ghost mt-3 hidden" id="profile-change-username-btn" style="margin-bottom:8px">✏️ &nbsp;修改用户名</button>
     <button class="btn btn-ghost mt-3" onclick="showScreen('settings')" style="margin-bottom:8px">⚙️ &nbsp;设置（语音 / 重置进度）</button>
     <button class="btn btn-danger hidden" id="profile-logout-btn">退出登录</button>
   </div>
@@ -441,6 +442,24 @@
         <h3>⚠️ 数据管理</h3>
         <button class="btn btn-danger" id="settings-reset-btn">重置所有学习进度</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================
+     MODAL: CHANGE USERNAME
+     ================================================ -->
+<div class="modal-overlay hidden" id="modal-change-username">
+  <div class="modal">
+    <div class="modal-emoji">✏️</div>
+    <h2 class="modal-title">修改用户名</h2>
+    <div class="input-group" style="margin-bottom:8px">
+      <input class="input" type="text" id="username-input-new" placeholder="新用户名（至少2个字符）" maxlength="20"/>
+    </div>
+    <div class="auth-error hidden" id="username-change-error"></div>
+    <div style="display:flex;gap:10px;margin-top:12px">
+      <button class="btn btn-ghost" id="modal-username-cancel" style="flex:1">取消</button>
+      <button class="btn btn-primary" id="modal-username-save" style="flex:1">保存</button>
     </div>
   </div>
 </div>
