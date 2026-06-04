@@ -23,9 +23,9 @@ export default defineConfig({
     // 分包：把词库单独拆出来，加快首屏加载
     rollupOptions: {
       output: {
-        manualChunks: {
-          vocabulary: ['./src/vocabulary.js'],
-          firebase:   ['./src/firebase-config.js'],
+        manualChunks(id) {
+          if (id.includes('src/vocabulary')) return 'vocabulary'
+          if (id.includes('src/firebase-config')) return 'firebase'
         },
       },
     },
