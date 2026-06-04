@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <meta name="theme-color" content="#3730a3"/>
+  <title>韩语听写 · 한국어 받아쓰기</title>
+  <link rel="stylesheet" href="src/styles.css"/>
+  <!-- Firebase v9 Compat CDN（Vite 构建时不打包这些，保留 CDN） -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+  <!-- Vite entry (ES module) -->
+  <script type="module" src="src/main.js"></script>
+</head>
+<body>
+
+<!-- ================================================
+     SCREEN: LOADING
+     ================================================ -->
+<div class="screen active" id="screen-loading">
+  <div class="loading-spinner"></div>
+  <div style="font-size:1.5rem;font-weight:800;margin-bottom:6px">한국어 받아쓰기</div>
+  <div style="opacity:0.75;font-size:0.9rem">韩语听写练习</div>
+</div>
+
+<!-- ================================================
+     SCREEN: AUTH (Login / Register)
+     ================================================ -->
+<div class="screen" id="screen-auth">
+  <div class="auth-logo">
+    <div class="auth-logo-icon">🇰🇷</div>
+    <div class="auth-logo-title">한국어 받아쓰기</div>
+    <div class="auth-logo-sub">韩语听写练习 · 好友挑战 · 积分排名</div>
+  </div>
+  <div class="auth-card">
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="auth-tab-login">登录</button>
+      <button class="auth-tab" id="auth-tab-register">注册</button>
+    </div>
+    <div class="auth-error hidden" id="auth-error"></div>
+
+    <!-- Login form -->
+    <div id="auth-form-login">
+      <div class="input-group">
+        <label class="input-label">邮箱</label>
+        <input class="input" type="email" id="login-email" placeholder="your@email.com" autocomplete="email"/>
+      </div>
+      <div class="input-group">
+        <label class="input-label">密码</label>
+        <input class="input" type="password" id="login-pass" placeholder="••••••" autocomplete="current-password"/>
+      </div>
+      <button class="btn btn-primary" id="auth-login-btn">登录</button>
+    </div>
+
+    <!-- Register form -->
+    <div id="auth-form-register" class="hidden">
+      <div class="input-group">
+        <label class="input-label">用户名（好友搜索用）</label>
+        <input class="input" type="text" id="reg-username" placeholder="如：小明학습자" autocomplete="username"/>
+      </div>
+      <div class="input-group">
+        <label class="input-label">邮箱</label>
+        <input class="input" type="email" id="reg-email" placeholder="your@email.com" autocomplete="email"/>
+      </div>
+      <div class="input-group">
+        <label class="input-label">密码（至少6位）</label>
+        <input class="input" type="password" id="reg-pass" placeholder="••••••" autocomplete="new-password"/>
+      </div>
+      <div class="input-group">
+        <label class="input-label">确认密码</label>
+        <input class="input" type="password" id="reg-pass2" placeholder="••••••" autocomplete="new-password"/>
+      </div>
+      <button class="btn btn-primary" id="auth-register-btn">注册并开始</button>
+    </div>
+
+    <div class="divider-text">或者</div>
+    <div class="auth-guest">
+      <button id="auth-guest-btn">以访客身份体验（不同步进度）</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================
+     SCREEN: HOME
+     ================================================ -->
+<div class="screen" id="screen-home">
+  <!-- Header -->
+  <div class="home-header">
+    <div class="home-header-top">
+      <div>
+        <div class="home-greeting" id="home-greeting">你好！</div>
+        <div class="home-username" id="home-username">Guest</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="btn-icon" onclick="showScreen('settings')" title="设置">⚙️</button>
+        <div class="home-avatar" id="home-avatar">🧑‍🎓</div>
+      </div>
+    </div>
+    <div class="home-level-row">
+      <span class="level-chip" id="home-level-chip">🌱 Lv.1 韩语新手</span>
+      <span class="level-chip gold" id="home-xp-chip">✦ 0</span>
+    </div>
+    <div class="home-xp-section">
+      <div class="xp-bar-wrap"><div class="xp-bar" id="home-xp-bar" style="width:0%"></div></div>
+      <div class="xp-label" id="home-xp-label">0 / 100 XP → Lv.2</div>
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div class="scroll-content">
+    <!-- Level selection -->
+    <div class="section-title">选择词库等级（可多选）</div>
+    <div class="level-cards-grid" id="level-cards-grid"></div>
+
+    <!-- Vocab count -->
+    <div id="vocab-count" style="font-size:0.78rem;color:var(--text-muted);text-align:right;margin:-6px 0 10px;font-weight:500"></div>
+
+    <!-- Start button -->
+    <button class="home-start-btn" id="home-start-btn">
+      <span style="font-size:1.3rem">▶</span> 开始练习
+    </button>
+
+    <!-- Stats row -->
+    <div class="home-stats">
+      <div class="home-stat-card">
+        <div class="home-stat-num" id="home-stat-answered">0</div>
+        <div class="home-stat-name">📝 总答题</div>
+      </div>
+      <div class="home-stat-card">
+        <div class="home-stat-num" id="home-stat-accuracy">0%</div>
+        <div class="home-stat-name">✅ 正确率</div>
+      </div>
+      <div class="home-stat-card">
+        <div class="home-stat-num" id="home-stat-streak">0</div>
+        <div class="home-stat-name">🔥 最高连击</div>
+      </div>
+    </div>
+
+    <!-- Leaderboard preview -->
+    <div class="card" style="margin-top:14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div style="font-weight:700;font-size:0.95rem">🏆 全球排行榜</div>
+        <button class="btn btn-ghost btn-sm" style="width:auto" onclick="showScreen('friends')">查看更多</button>
+      </div>
+      <div id="home-leaderboard"></div>
+    </div>
+  </div>
+
+  <!-- Bottom Nav -->
+  <nav class="bottom-nav">
+    <button class="nav-item active" data-screen="home">
+      <span class="nav-icon">🏠</span><span class="nav-label">主页</span>
+    </button>
+    <button class="nav-item" data-screen="practice">
+      <span class="nav-icon">✏️</span><span class="nav-label">练习</span>
+    </button>
+    <button class="nav-item" data-screen="review">
+      <span class="nav-icon">📚</span><span class="nav-label">错题库</span>
+    </button>
+    <button class="nav-item" data-screen="friends">
+      <span class="nav-icon">👥</span><span class="nav-label">好友</span>
+      <span class="nav-badge hidden" id="friends-nav-badge">0</span>
+    </button>
+    <button class="nav-item" data-screen="profile">
+      <span class="nav-icon">👤</span><span class="nav-label">我的</span>
+    </button>
+  </nav>
+</div>
+
+<!-- ================================================
+     SCREEN: PRACTICE
+     ================================================ -->
+<div class="screen" id="screen-practice">
+  <div class="top-header">
+    <button class="back-btn" onclick="showScreen('home')">←</button>
+    <span class="top-header-title">听写练习</span>
+    <span class="top-header-right" id="practice-mode-label"></span>
+  </div>
+
+  <div class="scroll-content">
+    <div class="card">
+      <!-- Level badge -->
+      <div style="margin-bottom:14px">
+        <span class="topik-badge t1" id="practice-level-badge">TOPIK 1</span>
+      </div>
+
+      <!-- Meaning display (new: shown during practice) -->
+      <div class="practice-meaning-box">
+        <div class="meaning-pos" id="practice-pos">명사  名词</div>
+        <div class="meaning-text" id="practice-meaning">人</div>
+        <div class="meaning-sub">听发音，用韩文输入这个词</div>
+      </div>
+
+      <!-- API source tag -->
+      <div id="practice-source" style="font-size:0.72rem;color:var(--primary-light);text-align:right;margin-bottom:4px;min-height:14px"></div>
+
+      <!-- Audio controls -->
+      <div class="audio-row">
+        <button class="play-main" id="practice-play-btn">▶ &nbsp;播放单词</button>
+        <button class="play-slow" id="practice-slow-btn">🐢 慢速</button>
+      </div>
+
+      <!-- Hint row -->
+      <div class="hint-row">
+        <button class="hint-toggle" id="practice-hint-btn">💡 显示发音提示</button>
+        <span class="romanization-chip hidden" id="practice-hint-rom"></span>
+      </div>
+
+      <!-- Input -->
+      <div class="input-group">
+        <label class="input-label">用韩文输入你听到的单词：</label>
+        <input type="text" class="input input-korean" id="practice-input"
+          placeholder="한국어 입력..."
+          autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+        <div class="input-tip">💡 手机切换韩文键盘 · 电脑可用搜狗/微软韩文输入法 · 按 Enter 提交</div>
+      </div>
+
+      <button class="btn btn-primary" id="practice-submit">提交答案</button>
+
+      <!-- Result area -->
+      <div class="result-area hidden" id="practice-result">
+        <div class="result-status" id="practice-result-status"></div>
+        <div class="result-answer" id="practice-result-word"></div>
+        <div class="result-meaning-small" id="practice-result-meaning"></div>
+        <div class="example-box">
+          <div class="example-label">📝 示范例句</div>
+          <div class="example-korean" id="practice-example-korean"></div>
+          <div class="example-chinese" id="practice-example-chinese"></div>
+          <button class="play-example-btn" id="practice-play-example">🔊 朗读例句</button>
+        </div>
+        <button class="btn btn-success mt-3" id="practice-next-btn">下一题 →</button>
+      </div>
+    </div>
+
+    <!-- Session stats -->
+    <div class="session-stats">
+      <div class="session-stat">
+        <div class="session-stat-num" id="s-correct">0</div>
+        <div class="session-stat-name">✅ 答对</div>
+      </div>
+      <div class="session-stat">
+        <div class="session-stat-num" id="s-wrong">0</div>
+        <div class="session-stat-name">❌ 答错</div>
+      </div>
+      <div class="session-stat">
+        <div class="session-stat-num" id="s-streak">0</div>
+        <div class="session-stat-name">🔥 连击</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Nav -->
+  <nav class="bottom-nav">
+    <button class="nav-item" data-screen="home"><span class="nav-icon">🏠</span><span class="nav-label">主页</span></button>
+    <button class="nav-item active" data-screen="practice"><span class="nav-icon">✏️</span><span class="nav-label">练习</span></button>
+    <button class="nav-item" data-screen="review"><span class="nav-icon">📚</span><span class="nav-label">错题库</span></button>
+    <button class="nav-item" data-screen="friends"><span class="nav-icon">👥</span><span class="nav-label">好友</span><span class="nav-badge hidden" id="friends-nav-badge2">0</span></button>
+    <button class="nav-item" data-screen="profile"><span class="nav-icon">👤</span><span class="nav-label">我的</span></button>
+  </nav>
+</div>
+
+<!-- ================================================
+     SCREEN: REVIEW
+     ================================================ -->
+<div class="screen" id="screen-review">
+  <div class="top-header">
+    <button class="back-btn" onclick="showScreen('home')">←</button>
+    <span class="top-header-title">错题库</span>
+    <span class="count-badge" id="review-count">0 个</span>
+  </div>
+  <div class="scroll-content">
+    <div id="review-empty" class="empty-state">
+      <div class="empty-icon">🎉</div>
+      <div class="empty-text">太棒了！暂无错题</div>
+    </div>
+    <div id="review-list"></div>
+    <div id="review-start-wrap" class="hidden">
+      <button class="btn btn-primary" id="review-start-btn">▶ 开始复习错题</button>
+    </div>
+  </div>
+  <nav class="bottom-nav">
+    <button class="nav-item" data-screen="home"><span class="nav-icon">🏠</span><span class="nav-label">主页</span></button>
+    <button class="nav-item" data-screen="practice"><span class="nav-icon">✏️</span><span class="nav-label">练习</span></button>
+    <button class="nav-item active" data-screen="review"><span class="nav-icon">📚</span><span class="nav-label">错题库</span></button>
+    <button class="nav-item" data-screen="friends"><span class="nav-icon">👥</span><span class="nav-label">好友</span></button>
+    <button class="nav-item" data-screen="profile"><span class="nav-icon">👤</span><span class="nav-label">我的</span></button>
+  </nav>
+</div>
+
+<!-- ================================================
+     SCREEN: FRIENDS
+     ================================================ -->
+<div class="screen" id="screen-friends">
+  <div class="top-header">
+    <button class="back-btn" onclick="showScreen('home')">←</button>
+    <span class="top-header-title">好友 & 排行榜</span>
+  </div>
+  <div class="scroll-content">
+    <!-- Offline message -->
+    <div id="friends-offline-msg" class="card hidden" style="text-align:center">
+      <div style="font-size:2rem;margin-bottom:10px">🔒</div>
+      <div style="font-weight:700;margin-bottom:6px">好友功能需要登录</div>
+      <div style="color:var(--text-muted);font-size:0.88rem;margin-bottom:16px">
+        注册账号后可以添加好友、查看世界排名、与好友比拼积分！
+      </div>
+      <button class="btn btn-primary" onclick="showScreen('auth')">去注册 / 登录</button>
+    </div>
+
+    <!-- Friends content -->
+    <div id="friends-content" class="hidden">
+      <!-- Search -->
+      <div class="card card-sm">
+        <div style="font-weight:700;font-size:0.95rem;margin-bottom:10px">🔍 搜索用户</div>
+        <div class="search-row">
+          <input class="input" type="text" id="friend-search-input" placeholder="输入用户名搜索..." style="margin:0"/>
+          <button class="btn btn-primary btn-sm" id="friend-search-btn" style="width:auto">搜索</button>
+        </div>
+        <div id="friend-search-results"></div>
+      </div>
+
+      <!-- Pending requests -->
+      <div id="friend-requests-section" class="card card-sm hidden">
+        <div style="font-weight:700;font-size:0.95rem;margin-bottom:10px;color:var(--warning)">📨 好友请求</div>
+        <div id="friend-requests-list"></div>
+      </div>
+
+      <!-- Friend list -->
+      <div class="card card-sm">
+        <div style="font-weight:700;font-size:0.95rem;margin-bottom:10px">👥 我的好友</div>
+        <div id="friends-list"></div>
+      </div>
+
+      <!-- Friend leaderboard -->
+      <div class="card card-sm">
+        <div style="font-weight:700;font-size:0.95rem;margin-bottom:10px">🏆 好友排行榜</div>
+        <div id="friends-leaderboard"></div>
+      </div>
+    </div>
+  </div>
+  <nav class="bottom-nav">
+    <button class="nav-item" data-screen="home"><span class="nav-icon">🏠</span><span class="nav-label">主页</span></button>
+    <button class="nav-item" data-screen="practice"><span class="nav-icon">✏️</span><span class="nav-label">练习</span></button>
+    <button class="nav-item" data-screen="review"><span class="nav-icon">📚</span><span class="nav-label">错题库</span></button>
+    <button class="nav-item active" data-screen="friends"><span class="nav-icon">👥</span><span class="nav-label">好友</span></button>
+    <button class="nav-item" data-screen="profile"><span class="nav-icon">👤</span><span class="nav-label">我的</span></button>
+  </nav>
+</div>
+
+<!-- ================================================
+     SCREEN: PROFILE
+     ================================================ -->
+<div class="screen" id="screen-profile">
+  <div class="top-header">
+    <button class="back-btn" onclick="showScreen('home')">←</button>
+    <span class="top-header-title">我的档案</span>
+  </div>
+  <div class="scroll-content">
+    <div class="profile-hero">
+      <div class="profile-avatar">🧑‍🎓</div>
+      <div class="profile-username" id="profile-username">Guest</div>
+      <div class="profile-level-name" id="profile-level-name">🌱 Lv.1 韩语新手</div>
+      <div style="font-size:1.1rem;font-weight:700;color:#fde68a;margin-bottom:14px" id="profile-score">✦ 0 总积分</div>
+      <div class="profile-stats-row">
+        <div class="profile-stat">
+          <div class="profile-stat-num" id="profile-total">0</div>
+          <div class="profile-stat-name">总答题</div>
+        </div>
+        <div class="profile-stat">
+          <div class="profile-stat-num" id="profile-correct">0</div>
+          <div class="profile-stat-name">答对</div>
+        </div>
+        <div class="profile-stat">
+          <div class="profile-stat-num" id="profile-acc">0%</div>
+          <div class="profile-stat-name">正确率</div>
+        </div>
+        <div class="profile-stat">
+          <div class="profile-stat-num" id="profile-streak">0</div>
+          <div class="profile-stat-name">最高连击</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div style="font-weight:700;font-size:0.95rem;margin-bottom:12px">🏅 等级系统</div>
+      <div id="profile-level-list"></div>
+    </div>
+
+    <button class="btn btn-ghost mt-3" onclick="showScreen('settings')" style="margin-bottom:8px">⚙️ &nbsp;设置（语音 / 重置进度）</button>
+    <button class="btn btn-danger hidden" id="profile-logout-btn">退出登录</button>
+  </div>
+  <nav class="bottom-nav">
+    <button class="nav-item" data-screen="home"><span class="nav-icon">🏠</span><span class="nav-label">主页</span></button>
+    <button class="nav-item" data-screen="practice"><span class="nav-icon">✏️</span><span class="nav-label">练习</span></button>
+    <button class="nav-item" data-screen="review"><span class="nav-icon">📚</span><span class="nav-label">错题库</span></button>
+    <button class="nav-item" data-screen="friends"><span class="nav-icon">👥</span><span class="nav-label">好友</span></button>
+    <button class="nav-item active" data-screen="profile"><span class="nav-icon">👤</span><span class="nav-label">我的</span></button>
+  </nav>
+</div>
+
+<!-- ================================================
+     SCREEN: SETTINGS
+     ================================================ -->
+<div class="screen" id="screen-settings">
+  <div class="top-header">
+    <button class="back-btn" onclick="showScreen('home')">←</button>
+    <span class="top-header-title">设置</span>
+  </div>
+  <div class="scroll-content no-nav">
+    <div class="card">
+      <div class="setting-section">
+        <h3>🔊 语音设置</h3>
+        <div class="setting-row">
+          <label>朗读速度</label>
+          <input type="range" id="rate-slider" min="0.5" max="1.5" step="0.1" value="1"/>
+          <span class="setting-val" id="rate-value">1.0x</span>
+        </div>
+        <div class="setting-row">
+          <label>音量</label>
+          <input type="range" id="vol-slider" min="0" max="1" step="0.1" value="1"/>
+          <span class="setting-val" id="vol-value">100%</span>
+        </div>
+        <button class="btn btn-ghost" id="settings-test-btn" style="margin-bottom:8px">🔊 测试语音（안녕하세요）</button>
+      </div>
+      <hr class="divider"/>
+      <div class="setting-section">
+        <h3>📡 词库 API（国立国语院）</h3>
+        <div id="krdict-status" style="font-size:0.85rem;margin-bottom:12px;padding:10px;background:var(--bg);border-radius:var(--radius-xs)">检测中...</div>
+        <div style="font-size:0.8rem;color:var(--text-muted);line-height:1.6">
+          申请免费 API Key：<br>
+          <a href="https://krdict.korean.go.kr/openApi/openApiInfo" target="_blank" style="color:var(--primary)">krdict.korean.go.kr</a>
+          → 注册 → 인증키 신청<br>
+          申请后将 Key 写入项目根目录的 <code>.env</code> 文件：<br>
+          <code style="background:#f1f5f9;padding:2px 6px;border-radius:4px;font-size:0.78rem">VITE_KRDICT_KEY=你的key</code>
+        </div>
+      </div>
+      <div class="setting-section" style="margin-top:0">
+      </div>
+      <hr class="divider"/>
+      <div class="setting-section">
+        <h3>⚠️ 数据管理</h3>
+        <button class="btn btn-danger" id="settings-reset-btn">重置所有学习进度</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================
+     MODAL: LEVEL UP
+     ================================================ -->
+<div class="modal-overlay hidden" id="modal-levelup">
+  <div class="modal">
+    <div class="modal-emoji">🎉</div>
+    <h2 class="modal-title">升级了！</h2>
+    <p class="modal-sub" id="modal-level-text">恭喜升级！</p>
+    <button class="btn btn-primary" id="modal-close-btn">继续加油！</button>
+  </div>
+</div>
+
+
+</body>
+</html>
