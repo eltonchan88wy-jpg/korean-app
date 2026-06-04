@@ -518,7 +518,11 @@ function showResult(isRight) {
   $('practice-result-word').textContent    = w.korean;
   $('practice-result-meaning').textContent = `${w.meaning}  (${w.rom})`;
   $('practice-example-korean').textContent  = w.example;
-  $('practice-example-chinese').textContent = w.exMeaning || '';
+  // API words have definition in exMeaning, not sentence translation
+  const exTrans = (w.fromApi || !w.exMeaning || w.exMeaning === w.meaning)
+    ? '' : w.exMeaning;
+  $('practice-example-chinese').textContent = exTrans;
+  $('practice-example-chinese').style.display = exTrans ? '' : 'none';
 }
 
 function updateSessionStats() {
