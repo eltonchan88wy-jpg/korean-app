@@ -4,14 +4,15 @@
 
 // ===== CONSTANTS =====
 var LEVELS_SYSTEM = [
-  { level:1, name:"韩语新手",      icon:"🌱", xp:0    },
-  { level:2, name:"入门学习者",    icon:"📖", xp:100  },
-  { level:3, name:"초보자",        icon:"✏️", xp:250  },
-  { level:4, name:"기초 탈출",     icon:"🎯", xp:500  },
-  { level:5, name:"중급 도전자",   icon:"⚡", xp:900  },
-  { level:6, name:"한국어 마스터", icon:"🏆", xp:1500 },
-  { level:7, name:"TOPIK 고수",    icon:"👑", xp:2500 },
-  { level:8, name:"원어민 수준",   icon:"🌟", xp:4000 },
+  { level:1, name:"냉면",       icon:"🍜", xp:0    },
+  { level:2, name:"돈까스",     icon:"🍱", xp:100  },
+  { level:3, name:"쌀국수",     icon:"🍲", xp:250  },
+  { level:4, name:"닭갈비",     icon:"🍗", xp:500  },
+  { level:5, name:"비빔밥",     icon:"🥗", xp:900  },
+  { level:6, name:"된장찌개",   icon:"🍵", xp:1500 },
+  { level:7, name:"김치전",     icon:"🥘", xp:2500 },
+  { level:8, name:"김치등갈비", icon:"🍖", xp:4000 },
+  { level:9, name:"갈비찜",     icon:"👑", xp:6000 },
 ];
 
 var TOPIK_INFO = [
@@ -207,23 +208,25 @@ function initFirebase() {
 function loadUserProfile(uid) {
   var db = firebase.firestore();
   return db.collection('users').doc(uid).get().then(function(doc) {
+    var localProfile = lsGet('profile', {});
     if (doc.exists) {
       var data = doc.data();
-      var localProfile = lsGet('profile', {});
-      AppState.profile = Object.assign({
-        username: data.username || 'User',
+      AppState.profile = {
+        username: data.username || localProfile.username || 'User',
         score: data.score || 0,
         totalAnswered: data.totalAnswered || 0,
         totalCorrect: data.totalCorrect || 0,
         bestStreak: data.bestStreak || 0,
         activeLevels: data.activeLevels || [1,2],
         wrongBank: localProfile.wrongBank || {}
-      }, {});
-      lsSet('profile', AppState.profile);
+      };
+    } else {
+      AppState.profile = localProfile || { username:'User', score:0, totalAnswered:0, totalCorrect:0, bestStreak:0, activeLevels:[1,2], wrongBank:{} };
     }
+    lsSet('profile', AppState.profile);
   }).catch(function(e) {
     console.warn('Failed to load profile from Firestore:', e);
-    AppState.profile = lsGet('profile', null);
+    AppState.profile = lsGet('profile', { username:'User', score:0, totalAnswered:0, totalCorrect:0, bestStreak:0, activeLevels:[1,2], wrongBank:{} });
   });
 }
 
@@ -308,7 +311,12 @@ function initAuthScreen() {
           lastActive: firebase.firestore.FieldValue.serverTimestamp()
         });
       })
-      .then(function() { setAuthLoading(false); showScreen('home'); })
+      .then(function() {
+        setAuthLoading(false);
+        firebase.auth().signOut();
+        AppState.user = null;
+        showRegisterSuccess();
+      })
       .catch(function(e) { setAuthLoading(false); showAuthError(getAuthError(e.code)); });
   };
 
@@ -318,6 +326,10 @@ function initAuthScreen() {
       if (e.key === 'Enter') document.getElementById('auth-login-btn').click();
     });
   });
+}
+
+function showRegisterSuccess() {
+  document.getElementById('modal-register-success').classList.remove('hidden');
 }
 
 function showAuthError(msg) {
@@ -549,7 +561,6 @@ function showResult(isRight) {
   document.getElementById('practice-result-meaning').textContent = w.meaning + '  (' + w.rom + ')';
   document.getElementById('practice-example-korean').textContent  = w.example;
   document.getElementById('practice-example-chinese').textContent = w.exMeaning;
-  setTimeout(function() { speak(w.example, AppState.speechRate * 0.9); }, 500);
 }
 
 function updateSessionStats() {
@@ -861,12 +872,11 @@ function initProfileScreen() {
   if (AppState.user && !AppState.user.isGuest && FIREBASE_ENABLED) {
     logoutBtn.classList.remove('hidden');
     logoutBtn.onclick = function() {
-      if (!confirm('确定退出登录？')) return;
-      firebase.auth().signOut().then(function() {
-        AppState.user = null; AppState.profile = null;
-        lsSet('profile', null);
-        showScreen('auth');
-      });
+      AppState.user = null;
+      AppState.profile = null;
+      localStorage.removeItem('kr_app_profile');
+      firebase.auth().signOut().catch(function(e) { console.warn('signOut error:', e); });
+      showScreen('auth');
     };
   } else {
     logoutBtn.classList.add('hidden');
@@ -1027,6 +1037,14 @@ function bindEvents() {
     }
     showToast('进度已重置！');
     showScreen('home');
+  });
+
+  // Register success modal confirm
+  document.getElementById('modal-register-ok-btn').addEventListener('click', function() {
+    document.getElementById('modal-register-success').classList.add('hidden');
+    // Switch to login tab
+    document.getElementById('auth-tab-login').click();
+    showScreen('auth');
   });
 
   // Level up modal close
