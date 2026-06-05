@@ -145,7 +145,8 @@ async function speak(text, rate) {
     audio.volume = State.speechVolume;
     currentAudio = audio;
     audio.play();
-  } catch {
+  } catch (e) {
+    showToast('TTS错误: ' + e.message);
     // fallback to browser TTS
     if (!window.speechSynthesis) return;
     window.speechSynthesis.cancel();
