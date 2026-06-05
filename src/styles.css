@@ -951,11 +951,12 @@ body {
 
 /* ===== DON'T KNOW BUTTON ===== */
 .dontknow-btn {
+  width: 100%;
+  margin-top: 8px;
   border: 1.5px solid var(--border);
   color: var(--text-muted);
   font-size: 0.9rem;
-  padding: 0 18px;
-  white-space: nowrap;
+  background: white;
 }
 .dontknow-btn:hover { background: #fef2f2; border-color: #fca5a5; color: #ef4444; }
 
