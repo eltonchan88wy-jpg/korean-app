@@ -1063,20 +1063,30 @@ function formatGroqResult(text) {
 // ────────────────────────────────────────────────────────────
 //  AUTO TRANSLATION (Baidu Fanyi)
 // ────────────────────────────────────────────────────────────
-// Cache: key = "wordId_level" or "korean_level"
-const sentenceCache = {};
+// Persistent cache helpers (localStorage)
+const CACHE_KEY_SENTENCE = 'aiCache_sentence';
+const CACHE_KEY_ANALYZE  = 'aiCache_analyze';
+
+function cacheLoad(storageKey) {
+  try { return JSON.parse(localStorage.getItem(storageKey) || '{}'); } catch { return {}; }
+}
+function cacheSave(storageKey, obj) {
+  try { localStorage.setItem(storageKey, JSON.stringify(obj)); } catch {}
+}
+
+// In-memory mirrors (avoid repeated JSON.parse)
+const sentenceCache = cacheLoad(CACHE_KEY_SENTENCE);
+const analyzeCache  = cacheLoad(CACHE_KEY_ANALYZE);
 
 async function generateLevelSentence(w, korEl, chineseEl) {
   const level = w.level || 1;
   const cacheKey = (w.id || w.korean) + '_' + level;
 
-  // Use cached result if available
   if (sentenceCache[cacheKey]) {
     const cached = sentenceCache[cacheKey];
     korEl.textContent = cached.sentence;
     chineseEl.textContent = cached.translation;
     chineseEl.style.display = '';
-    // Also update w so AI analyze can use it
     w.example = cached.sentence;
     w.exTrans = cached.translation;
     return;
@@ -1095,14 +1105,14 @@ async function generateLevelSentence(w, korEl, chineseEl) {
     const translation = data.translation || w.exMeaning || '';
 
     sentenceCache[cacheKey] = { sentence, translation };
+    cacheSave(CACHE_KEY_SENTENCE, sentenceCache);
+
     korEl.textContent = sentence;
     chineseEl.textContent = translation;
     chineseEl.style.display = sentence ? '' : 'none';
-    // Update w so AI analyze can use the fresh sentence
     w.example = sentence;
     w.exTrans = translation;
   } catch {
-    // Fallback to static example
     korEl.textContent = w.example || '';
     if (w.exMeaning || w.exTrans) {
       chineseEl.textContent = w.exTrans || w.exMeaning;
@@ -1144,44 +1154,36 @@ async function analyzeWord(w) {
   btn.disabled = true;
   btn.textContent = '分析中...';
   box.classList.remove('hidden');
-  box.innerHTML = '<span class="ai-loading">分析中...</span>';
-
-  // Get example translation (may already be visible)
-  const existingTrans = w.exTrans || (!w.fromApi ? w.exMeaning : '') || '';
-  let exampleTrans = existingTrans || $('practice-example-chinese').textContent;
-  if (!exampleTrans || exampleTrans === '翻译中...') {
-    try {
-      const resp = await fetch('/api/ai-example', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: w.example }),
-      });
-      const data = await resp.json();
-      exampleTrans = data.result || '';
-    } catch { exampleTrans = ''; }
-  }
 
   const posLabel = POS_MAP[w.pos] || w.pos || '';
+  const exampleTrans = w.exTrans || (!w.fromApi ? w.exMeaning : '') || $('practice-example-chinese').textContent || '';
   const highlighted = w.example
     ? w.example.replace(new RegExp(w.korean.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'),
         `<strong style="color:#7c3aed">${w.korean}</strong>`)
     : '';
 
-  // Show basic info immediately
-  let html = '';
+  let baseHtml = '';
   if (highlighted) {
-    html += `<div class="ai-section-title">📝 例句</div>`;
-    html += `<div style="font-family:'Noto Sans KR',sans-serif;font-size:1rem;line-height:1.6">${highlighted}</div>`;
-    if (exampleTrans) html += `<div style="color:#4b5563;margin-top:2px">${exampleTrans}</div>`;
+    baseHtml += `<div class="ai-section-title">📝 例句</div>`;
+    baseHtml += `<div style="font-family:'Noto Sans KR',sans-serif;font-size:1rem;line-height:1.6">${highlighted}</div>`;
+    if (exampleTrans) baseHtml += `<div style="color:#4b5563;margin-top:2px">${exampleTrans}</div>`;
   }
-  html += `<div class="ai-section-title" style="margin-top:10px">📖 单词信息</div>`;
-  if (posLabel) html += `<div>词性：${posLabel}</div>`;
-  html += `<div>含义：${w.meaning}</div>`;
-  if (w.rom) html += `<div>罗马音：${w.rom}</div>`;
-  html += `<div class="ai-section-title" style="margin-top:10px">💡 AI 分析中...</div>`;
-  box.innerHTML = html;
+  baseHtml += `<div class="ai-section-title" style="margin-top:10px">📖 单词信息</div>`;
+  if (posLabel) baseHtml += `<div>词性：${posLabel}</div>`;
+  baseHtml += `<div>含义：${w.meaning}</div>`;
+  if (w.rom) baseHtml += `<div>罗马音：${w.rom}</div>`;
 
-  // Fetch AI grammar analysis from Groq
+  // Check analyze cache (keyed by word + example sentence)
+  const analyzeCacheKey = w.korean + '_' + (w.example || '');
+  if (analyzeCache[analyzeCacheKey]) {
+    box.innerHTML = baseHtml + analyzeCache[analyzeCacheKey];
+    btn.textContent = '✨ AI 分析';
+    btn.disabled = false;
+    return;
+  }
+
+  box.innerHTML = baseHtml + `<div class="ai-section-title" style="margin-top:10px">💡 AI 分析中...</div>`;
+
   try {
     const resp = await fetch('/api/ai-analyze', {
       method: 'POST',
@@ -1190,13 +1192,15 @@ async function analyzeWord(w) {
     });
     const data = await resp.json();
     if (data.error) throw new Error(data.error);
-    // Replace AI loading placeholder with real result
-    box.innerHTML = html.replace('<div class="ai-section-title" style="margin-top:10px">💡 AI 分析中...</div>', formatGroqResult(data.result));
+    const analysisHtml = formatGroqResult(data.result);
+    analyzeCache[analyzeCacheKey] = analysisHtml;
+    cacheSave(CACHE_KEY_ANALYZE, analyzeCache);
+    box.innerHTML = baseHtml + analysisHtml;
   } catch (e) {
-    box.innerHTML = html.replace('<div class="ai-section-title" style="margin-top:10px">💡 AI 分析中...</div>',
-      `<div class="ai-section-title" style="margin-top:10px">💡 语法分析</div><div style="color:#ef4444">分析失败：${e.message}</div>`);
+    box.innerHTML = baseHtml + `<div class="ai-section-title" style="margin-top:10px">💡 语法分析</div><div style="color:#ef4444">分析失败：${e.message}</div>`;
   }
   btn.textContent = '✨ AI 分析';
+  btn.disabled = false;
 }
 
 // ────────────────────────────────────────────────────────────
