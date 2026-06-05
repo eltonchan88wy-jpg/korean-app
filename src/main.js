@@ -928,6 +928,22 @@ function bindEvents() {
   });
 }
 
+function formatGroqResult(text) {
+  let html = '';
+  const parts = text.split(/\[([^\]]+)\]/g);
+  const labelMap = { '语法要点': '💡 语法要点', '学习提示': '🔖 学习提示' };
+  for (let i = 1; i < parts.length; i += 2) {
+    const key = parts[i].trim();
+    const content = (parts[i + 1] || '').trim();
+    if (!content) continue;
+    html += `<div class="ai-section-title" style="margin-top:10px">${labelMap[key] || key}</div>`;
+    content.split('\n').filter(l => l.trim()).forEach(l => {
+      html += `<div style="color:#374151">${l.trim()}</div>`;
+    });
+  }
+  return html || `<div class="ai-section-title" style="margin-top:10px">💡 语法分析</div><div style="color:#374151">${text}</div>`;
+}
+
 // ────────────────────────────────────────────────────────────
 //  AUTO TRANSLATION (Baidu Fanyi)
 // ────────────────────────────────────────────────────────────
@@ -985,6 +1001,7 @@ async function analyzeWord(w) {
         `<strong style="color:#7c3aed">${w.korean}</strong>`)
     : '';
 
+  // Show basic info immediately
   let html = '';
   if (highlighted) {
     html += `<div class="ai-section-title">📝 例句</div>`;
@@ -994,9 +1011,25 @@ async function analyzeWord(w) {
   html += `<div class="ai-section-title" style="margin-top:10px">📖 单词信息</div>`;
   if (posLabel) html += `<div>词性：${posLabel}</div>`;
   html += `<div>含义：${w.meaning}</div>`;
-  if (w.rom)  html += `<div>罗马音：${w.rom}</div>`;
-
+  if (w.rom) html += `<div>罗马音：${w.rom}</div>`;
+  html += `<div class="ai-section-title" style="margin-top:10px">💡 AI 分析中...</div>`;
   box.innerHTML = html;
+
+  // Fetch AI grammar analysis from Groq
+  try {
+    const resp = await fetch('/api/ai-analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ word: w.korean, meaning: w.meaning, pos: posLabel, example: w.example, exampleTrans }),
+    });
+    const data = await resp.json();
+    if (data.error) throw new Error(data.error);
+    // Replace AI loading placeholder with real result
+    box.innerHTML = html.replace('<div class="ai-section-title" style="margin-top:10px">💡 AI 分析中...</div>', formatGroqResult(data.result));
+  } catch (e) {
+    box.innerHTML = html.replace('<div class="ai-section-title" style="margin-top:10px">💡 AI 分析中...</div>',
+      `<div class="ai-section-title" style="margin-top:10px">💡 语法分析</div><div style="color:#ef4444">分析失败：${e.message}</div>`);
+  }
   btn.textContent = '✨ AI 分析';
 }
 
