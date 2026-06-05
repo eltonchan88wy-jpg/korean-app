@@ -647,6 +647,50 @@ body {
 }
 .play-example-btn:hover { background: white; color: var(--text); }
 
+.ai-analyze-btn {
+  background: none;
+  border: 1.5px solid #a78bfa;
+  border-radius: var(--radius-xs);
+  padding: 4px 10px;
+  font-size: 0.78rem;
+  cursor: pointer;
+  color: #7c3aed;
+  transition: all 0.2s;
+  margin-left: 6px;
+}
+.ai-analyze-btn:hover { background: #f5f3ff; }
+.ai-analyze-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.ai-analysis-box {
+  margin-top: 12px;
+  background: #faf5ff;
+  border: 1px solid #ddd6fe;
+  border-radius: var(--radius-xs);
+  padding: 12px 14px;
+  font-size: 0.85rem;
+  color: var(--text);
+  line-height: 1.7;
+  text-align: left;
+}
+.ai-analysis-box .ai-section-title {
+  font-weight: 700;
+  color: #6d28d9;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 8px;
+  margin-bottom: 2px;
+}
+.ai-analysis-box .ai-section-title:first-child { margin-top: 0; }
+.ai-analysis-box .ai-generated-example {
+  font-family: 'Noto Sans KR', sans-serif;
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--text);
+}
+.ai-analysis-box .ai-tip { color: #4b5563; }
+.ai-loading { color: #7c3aed; font-style: italic; }
+
 /* Session stats */
 .session-stats { display: flex; gap: 8px; margin-top: 4px; }
 .session-stat { flex: 1; background: white; border-radius: var(--radius-sm); padding: 12px 6px; text-align: center; box-shadow: var(--shadow-sm); }

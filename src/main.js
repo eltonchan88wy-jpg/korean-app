@@ -518,11 +518,17 @@ function showResult(isRight) {
   $('practice-result-word').textContent    = w.korean;
   $('practice-result-meaning').textContent = `${w.meaning}  (${w.rom})`;
   $('practice-example-korean').textContent  = w.example;
-  // API words have definition in exMeaning, not sentence translation
-  const exTrans = (w.fromApi || !w.exMeaning || w.exMeaning === w.meaning)
-    ? '' : w.exMeaning;
+  // exTrans = AI-generated sentence translation (API words)
+  // exMeaning = sentence translation (local vocab words)
+  const exTrans = w.exTrans || (!w.fromApi ? w.exMeaning : '') || '';
   $('practice-example-chinese').textContent = exTrans;
   $('practice-example-chinese').style.display = exTrans ? '' : 'none';
+  // Reset AI analysis panel for new word
+  const aiBox = $('practice-ai-result');
+  aiBox.classList.add('hidden');
+  aiBox.innerHTML = '';
+  $('practice-ai-analyze').disabled = false;
+  $('practice-ai-analyze').textContent = '✨ AI 分析例句';
 }
 
 function updateSessionStats() {
@@ -842,6 +848,11 @@ function bindEvents() {
   $('practice-submit').addEventListener('click', submitAnswer);
   $('practice-next-btn').addEventListener('click', () => nextWord(State.isReviewMode && State.reviewQueue.length > 0));
   $('practice-play-example').addEventListener('click', () => State.currentWord && speak(State.currentWord.example, State.speechRate * 0.9));
+  $('practice-ai-analyze').addEventListener('click', () => {
+    const w = State.currentWord;
+    if (!w) return;
+    analyzeWithAI(w);
+  });
 
   // Review
   $('review-start-btn').addEventListener('click', () => {
@@ -912,6 +923,63 @@ function bindEvents() {
     showToast('用户名已更新！');
     initProfile();
   });
+}
+
+// ────────────────────────────────────────────────────────────
+//  AI EXAMPLE ANALYSIS
+// ────────────────────────────────────────────────────────────
+async function analyzeWithAI(w) {
+  const btn = $('practice-ai-analyze');
+  const box = $('practice-ai-result');
+  btn.disabled = true;
+  btn.textContent = '分析中...';
+  box.innerHTML = '<span class="ai-loading">✨ AI 正在分析...</span>';
+  box.classList.remove('hidden');
+
+  try {
+    const resp = await fetch('/api/ai-example', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ word: w.korean, meaning: w.meaning, example: w.example }),
+    });
+    const data = await resp.json();
+    if (data.error) throw new Error(data.error);
+    box.innerHTML = formatAIResult(data.result);
+  } catch (e) {
+    box.innerHTML = `<span style="color:#ef4444">分析失败：${e.message}</span>`;
+    btn.disabled = false;
+    btn.textContent = '✨ AI 分析例句';
+  }
+}
+
+function formatAIResult(text) {
+  // Parse sections like [例句], [翻译], [语法]
+  const sectionMap = { '例句': '📝 AI造句', '翻译': '🇨🇳 翻译', '语法': '💡 语法要点' };
+  let html = '';
+  const parts = text.split(/\[([^\]]+)\]/g);
+  for (let i = 1; i < parts.length; i += 2) {
+    const key = parts[i].trim();
+    const content = (parts[i + 1] || '').trim();
+    if (!content) continue;
+    const label = sectionMap[key] || key;
+    const isExample = key === '例句';
+    const isGrammar = key === '语法';
+    html += `<div class="ai-section-title">${label}</div>`;
+    if (isExample) {
+      html += `<div class="ai-generated-example">${escHtml(content)}</div>`;
+    } else if (isGrammar) {
+      const lines = content.split('\n').filter(l => l.trim());
+      html += lines.map(l => `<div class="ai-tip">${escHtml(l)}</div>`).join('');
+    } else {
+      html += `<div>${escHtml(content)}</div>`;
+    }
+  }
+  // Fallback: show raw text if no sections parsed
+  return html || `<div>${escHtml(text)}</div>`;
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
 // ────────────────────────────────────────────────────────────
