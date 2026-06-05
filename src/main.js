@@ -1063,35 +1063,50 @@ function formatGroqResult(text) {
 // ────────────────────────────────────────────────────────────
 //  AUTO TRANSLATION (Baidu Fanyi)
 // ────────────────────────────────────────────────────────────
-// Persistent cache helpers (localStorage)
+// AI Cache — localStorage (L1) + Firestore (L2 shared across users)
 const CACHE_KEY_SENTENCE = 'aiCache_sentence';
 const CACHE_KEY_ANALYZE  = 'aiCache_analyze';
 
-function cacheLoad(storageKey) {
-  try { return JSON.parse(localStorage.getItem(storageKey) || '{}'); } catch { return {}; }
-}
-function cacheSave(storageKey, obj) {
-  try { localStorage.setItem(storageKey, JSON.stringify(obj)); } catch {}
-}
+function lsLoad(k) { try { return JSON.parse(localStorage.getItem(k) || '{}'); } catch { return {}; } }
+function lsSave(k, obj) { try { localStorage.setItem(k, JSON.stringify(obj)); } catch {} }
 
-// In-memory mirrors (avoid repeated JSON.parse)
-const sentenceCache = cacheLoad(CACHE_KEY_SENTENCE);
-const analyzeCache  = cacheLoad(CACHE_KEY_ANALYZE);
+const sentenceCache = lsLoad(CACHE_KEY_SENTENCE);
+const analyzeCache  = lsLoad(CACHE_KEY_ANALYZE);
+
+function fsDb() { return typeof firebase !== 'undefined' && firebase.apps?.length ? firebase.firestore() : null; }
+
+async function fsGet(docId) {
+  const db = fsDb(); if (!db) return null;
+  try { const d = await db.collection('aiCache').doc(docId).get(); return d.exists ? d.data() : null; } catch { return null; }
+}
+async function fsSet(docId, data) {
+  const db = fsDb(); if (!db) return;
+  try { await db.collection('aiCache').doc(docId).set(data); } catch {}
+}
 
 async function generateLevelSentence(w, korEl, chineseEl) {
   const level = w.level || 1;
-  const cacheKey = (w.id || w.korean) + '_' + level;
+  const localKey = (w.id || w.korean) + '_' + level;
+  const fsKey    = 's_' + localKey;
 
-  if (sentenceCache[cacheKey]) {
-    const cached = sentenceCache[cacheKey];
-    korEl.textContent = cached.sentence;
-    chineseEl.textContent = cached.translation;
-    chineseEl.style.display = '';
-    w.example = cached.sentence;
-    w.exTrans = cached.translation;
+  // L1: localStorage
+  if (sentenceCache[localKey]) {
+    const c = sentenceCache[localKey];
+    korEl.textContent = c.sentence; chineseEl.textContent = c.translation; chineseEl.style.display = '';
+    w.example = c.sentence; w.exTrans = c.translation;
     return;
   }
 
+  // L2: Firestore shared cache
+  const remote = await fsGet(fsKey);
+  if (remote?.sentence) {
+    sentenceCache[localKey] = remote; lsSave(CACHE_KEY_SENTENCE, sentenceCache);
+    korEl.textContent = remote.sentence; chineseEl.textContent = remote.translation; chineseEl.style.display = '';
+    w.example = remote.sentence; w.exTrans = remote.translation;
+    return;
+  }
+
+  // L3: Call AI, then write back to both caches
   try {
     const resp = await fetch('/api/ai-sentence', {
       method: 'POST',
@@ -1101,25 +1116,17 @@ async function generateLevelSentence(w, korEl, chineseEl) {
     const data = await resp.json();
     if (data.error) throw new Error(data.error);
 
-    const sentence    = data.sentence || w.example || '';
-    const translation = data.translation || w.exMeaning || '';
+    const entry = { sentence: data.sentence || w.example || '', translation: data.translation || w.exMeaning || '' };
+    sentenceCache[localKey] = entry; lsSave(CACHE_KEY_SENTENCE, sentenceCache);
+    fsSet(fsKey, entry); // fire-and-forget
 
-    sentenceCache[cacheKey] = { sentence, translation };
-    cacheSave(CACHE_KEY_SENTENCE, sentenceCache);
-
-    korEl.textContent = sentence;
-    chineseEl.textContent = translation;
-    chineseEl.style.display = sentence ? '' : 'none';
-    w.example = sentence;
-    w.exTrans = translation;
+    korEl.textContent = entry.sentence; chineseEl.textContent = entry.translation;
+    chineseEl.style.display = entry.sentence ? '' : 'none';
+    w.example = entry.sentence; w.exTrans = entry.translation;
   } catch {
     korEl.textContent = w.example || '';
-    if (w.exMeaning || w.exTrans) {
-      chineseEl.textContent = w.exTrans || w.exMeaning;
-      chineseEl.style.display = '';
-    } else {
-      chineseEl.style.display = 'none';
-    }
+    if (w.exMeaning || w.exTrans) { chineseEl.textContent = w.exTrans || w.exMeaning; chineseEl.style.display = ''; }
+    else chineseEl.style.display = 'none';
   }
 }
 
@@ -1173,16 +1180,21 @@ async function analyzeWord(w) {
   baseHtml += `<div>含义：${w.meaning}</div>`;
   if (w.rom) baseHtml += `<div>罗马音：${w.rom}</div>`;
 
-  // Check analyze cache (keyed by word + example sentence)
+  // Check analyze cache — L1 localStorage, L2 Firestore
   const analyzeCacheKey = w.korean + '_' + (w.example || '');
-  if (analyzeCache[analyzeCacheKey]) {
-    box.innerHTML = baseHtml + analyzeCache[analyzeCacheKey];
-    btn.textContent = '✨ AI 分析';
-    btn.disabled = false;
-    return;
-  }
+  const analyzefsKey = 'a_' + w.korean + '_' + (w.id || '');
+
+  const showAnalysis = (html) => { box.innerHTML = baseHtml + html; btn.textContent = '✨ AI 分析'; btn.disabled = false; };
+
+  if (analyzeCache[analyzeCacheKey]) { showAnalysis(analyzeCache[analyzeCacheKey]); return; }
 
   box.innerHTML = baseHtml + `<div class="ai-section-title" style="margin-top:10px">💡 AI 分析中...</div>`;
+
+  const remoteAnalyze = await fsGet(analyzefsKey);
+  if (remoteAnalyze?.html) {
+    analyzeCache[analyzeCacheKey] = remoteAnalyze.html; lsSave(CACHE_KEY_ANALYZE, analyzeCache);
+    showAnalysis(remoteAnalyze.html); return;
+  }
 
   try {
     const resp = await fetch('/api/ai-analyze', {
@@ -1193,11 +1205,12 @@ async function analyzeWord(w) {
     const data = await resp.json();
     if (data.error) throw new Error(data.error);
     const analysisHtml = formatGroqResult(data.result);
-    analyzeCache[analyzeCacheKey] = analysisHtml;
-    cacheSave(CACHE_KEY_ANALYZE, analyzeCache);
-    box.innerHTML = baseHtml + analysisHtml;
+    analyzeCache[analyzeCacheKey] = analysisHtml; lsSave(CACHE_KEY_ANALYZE, analyzeCache);
+    fsSet(analyzefsKey, { html: analysisHtml }); // fire-and-forget
+    showAnalysis(analysisHtml);
   } catch (e) {
     box.innerHTML = baseHtml + `<div class="ai-section-title" style="margin-top:10px">💡 语法分析</div><div style="color:#ef4444">分析失败：${e.message}</div>`;
+    btn.textContent = '✨ AI 分析'; btn.disabled = false;
   }
   btn.textContent = '✨ AI 分析';
   btn.disabled = false;
