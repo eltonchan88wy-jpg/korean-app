@@ -842,9 +842,14 @@ function bindEvents() {
   $('practice-hint-btn').addEventListener('click', () => {
     State.hintShown = !State.hintShown;
     const el = $('practice-hint-rom');
-    el.textContent = State.hintShown ? (State.currentWord?.rom || '（暂无罗马音）') : '';
     el.classList.toggle('hidden', !State.hintShown);
     $('practice-hint-btn').textContent = State.hintShown ? '💡 隐藏发音提示' : '💡 显示发音提示';
+    if (!State.hintShown) return;
+    const w = State.currentWord;
+    if (!w) return;
+    if (w.rom) { el.textContent = w.rom; return; }
+    el.textContent = '生成中...';
+    fetchRomanization(w).then(rom => { el.textContent = rom; });
   });
   $('practice-input').addEventListener('keydown', e => {
     if (e.key === 'Enter') {
@@ -926,6 +931,25 @@ function bindEvents() {
     showToast('用户名已更新！');
     initProfile();
   });
+}
+
+const romCache = {};
+async function fetchRomanization(w) {
+  if (romCache[w.korean]) return romCache[w.korean];
+  try {
+    const resp = await fetch('/api/romanize', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ word: w.korean }),
+    });
+    const data = await resp.json();
+    const rom = data.result || '（暂无）';
+    romCache[w.korean] = rom;
+    w.rom = rom; // cache on word object too
+    return rom;
+  } catch {
+    return '（暂无）';
+  }
 }
 
 function formatGroqResult(text) {
