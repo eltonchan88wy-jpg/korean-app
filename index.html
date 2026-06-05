@@ -397,19 +397,8 @@
     <!-- Bio section -->
     <div class="card" style="margin-bottom:10px">
       <div style="font-weight:700;font-size:0.95rem;margin-bottom:8px">💬 个人简介</div>
-      <div id="profile-bio-display" style="color:var(--text-muted);font-size:0.9rem;min-height:32px"></div>
-      <div id="profile-bio-edit" class="hidden" style="margin-top:8px">
-        <textarea id="profile-bio-input" class="input" maxlength="100" rows="3"
-          style="resize:none;font-size:0.9rem" placeholder="介绍一下自己吧（最多100字）"></textarea>
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px">
-          <span id="profile-bio-count" style="font-size:0.75rem;color:var(--text-muted)">0/100</span>
-          <div style="display:flex;gap:6px">
-            <button class="btn btn-ghost" id="profile-bio-cancel" style="padding:5px 14px;font-size:0.78rem;height:auto">取消</button>
-            <button class="btn btn-primary" id="profile-bio-save" style="padding:5px 14px;font-size:0.78rem;height:auto">保存</button>
-          </div>
-        </div>
-      </div>
-      <button class="btn btn-ghost hidden" id="profile-bio-edit-btn" style="margin-top:8px;padding:4px 12px;font-size:0.82rem">✏️ 编辑简介</button>
+      <div id="profile-bio-display" style="color:var(--text-muted);font-size:0.9rem;min-height:24px"></div>
+      <button class="btn btn-ghost hidden" id="profile-bio-edit-btn" style="margin-top:10px;width:100%">✏️ 编辑简介</button>
     </div>
 
     <button class="btn btn-ghost mt-3 hidden" id="profile-change-username-btn" style="margin-bottom:8px">✏️ &nbsp;修改用户名</button>
@@ -511,6 +500,25 @@
     <h2 class="modal-title">升级了！</h2>
     <p class="modal-sub" id="modal-level-text">恭喜升级！</p>
     <button class="btn btn-primary" id="modal-close-btn">继续加油！</button>
+  </div>
+</div>
+
+<!-- ================================================
+     MODAL: EDIT BIO
+     ================================================ -->
+<div class="modal-overlay hidden" id="modal-edit-bio">
+  <div class="modal" style="max-width:340px">
+    <div class="modal-emoji">💬</div>
+    <h2 class="modal-title">编辑个人简介</h2>
+    <textarea id="bio-input-modal" class="input" maxlength="100" rows="4"
+      style="resize:none;font-size:0.9rem;margin-top:8px" placeholder="介绍一下自己吧（最多100字）"></textarea>
+    <div style="text-align:right;font-size:0.75rem;color:var(--text-muted);margin-top:4px">
+      <span id="bio-modal-count">0</span>/100
+    </div>
+    <div style="display:flex;gap:10px;margin-top:12px">
+      <button class="btn btn-ghost" id="bio-modal-cancel" style="flex:1">取消</button>
+      <button class="btn btn-primary" id="bio-modal-save" style="flex:1">保存</button>
+    </div>
   </div>
 </div>
 

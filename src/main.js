@@ -258,6 +258,10 @@ async function loadUserProfile(uid) {
         totalAnswered: d.totalAnswered || 0, totalCorrect: d.totalCorrect || 0,
         bestStreak: d.bestStreak || 0, activeLevels: d.activeLevels || [1,2],
         wrongBank: local.wrongBank || {},
+        avatar: d.avatar || local.avatar || '🐱',
+        bio: d.bio || local.bio || '',
+        studyStreak: d.studyStreak || local.studyStreak || 0,
+        lastStudyDate: d.lastStudyDate || local.lastStudyDate || '',
       };
       LS.set('profile', State.profile);
     }
@@ -360,6 +364,7 @@ function initHome() {
   const info = getLevelInfo(p.score || 0);
   const next = getNextLevel(p.score || 0);
 
+  $('home-avatar').textContent = p.avatar || '🐱';
   const h = new Date().getHours();
   $('home-greeting').textContent = (h < 12 ? '早上好' : h < 18 ? '下午好' : '晚上好') + '！';
   $('home-username').textContent  = p.username || 'Guest';
@@ -812,8 +817,6 @@ function initProfile() {
 
   const isLoggedIn = FIREBASE_ENABLED && State.user && !State.user.isGuest;
   $('profile-bio-edit-btn').classList.toggle('hidden', !isLoggedIn);
-  $('profile-bio-display').classList.remove('hidden');
-  $('profile-bio-edit').classList.add('hidden');
 
   const changeUsernameBtn = $('profile-change-username-btn');
   if (changeUsernameBtn) {
@@ -944,32 +947,24 @@ function bindEvents() {
   // Friend profile modal close
   $('fp-close').addEventListener('click', () => $('modal-friend-profile').classList.add('hidden'));
 
-  // Bio edit
+  // Bio edit modal
   $('profile-bio-edit-btn').addEventListener('click', () => {
     const p = getProfile();
-    $('profile-bio-input').value = p.bio || '';
-    $('profile-bio-count').textContent = (p.bio || '').length + '/100';
-    $('profile-bio-display').classList.add('hidden');
-    $('profile-bio-edit-btn').classList.add('hidden');
-    $('profile-bio-edit').classList.remove('hidden');
+    $('bio-input-modal').value = p.bio || '';
+    $('bio-modal-count').textContent = (p.bio || '').length;
+    $('modal-edit-bio').classList.remove('hidden');
   });
-  $('profile-bio-input').addEventListener('input', () => {
-    $('profile-bio-count').textContent = $('profile-bio-input').value.length + '/100';
+  $('bio-input-modal').addEventListener('input', () => {
+    $('bio-modal-count').textContent = $('bio-input-modal').value.length;
   });
-  $('profile-bio-cancel').addEventListener('click', () => {
-    $('profile-bio-edit').classList.add('hidden');
-    $('profile-bio-display').classList.remove('hidden');
-    $('profile-bio-edit-btn').classList.remove('hidden');
-  });
-  $('profile-bio-save').addEventListener('click', () => {
+  $('bio-modal-cancel').addEventListener('click', () => $('modal-edit-bio').classList.add('hidden'));
+  $('bio-modal-save').addEventListener('click', () => {
     const p = getProfile();
-    p.bio = $('profile-bio-input').value.trim();
+    p.bio = $('bio-input-modal').value.trim();
     saveProfile(p);
     $('profile-bio-display').textContent = p.bio || '还没有简介，点击编辑添加吧~';
     $('profile-bio-display').style.fontStyle = p.bio ? 'normal' : 'italic';
-    $('profile-bio-edit').classList.add('hidden');
-    $('profile-bio-display').classList.remove('hidden');
-    $('profile-bio-edit-btn').classList.remove('hidden');
+    $('modal-edit-bio').classList.add('hidden');
     showToast('简介已保存！');
   });
 
@@ -1182,6 +1177,7 @@ window.openEmojiPicker = function() {
       p.avatar = e;
       saveProfile(p);
       $('profile-avatar').textContent = e;
+      $('home-avatar').textContent = e;
       $('modal-emoji-picker').classList.add('hidden');
       showToast('头像已更新！');
     };
