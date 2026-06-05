@@ -126,7 +126,13 @@ async function speak(text, rate) {
   const slow = rate != null && rate < 0.85;
   const cacheKey = text + (slow ? '_slow' : '');
 
+  // Stop any current audio
   if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+  if (window.speechSynthesis) window.speechSynthesis.cancel();
+
+  // Pre-unlock audio context with a silent play during the user gesture
+  const unlockAudio = new Audio();
+  unlockAudio.play().catch(() => {});
 
   try {
     let audioB64 = ttsCache[cacheKey];
@@ -144,17 +150,9 @@ async function speak(text, rate) {
     const audio = new Audio('data:audio/mp3;base64,' + audioB64);
     audio.volume = State.speechVolume;
     currentAudio = audio;
-    audio.play();
+    await audio.play();
   } catch (e) {
     showToast('TTS错误: ' + e.message);
-    // fallback to browser TTS
-    if (!window.speechSynthesis) return;
-    window.speechSynthesis.cancel();
-    const utt  = new SpeechSynthesisUtterance(text);
-    utt.lang   = 'ko-KR';
-    utt.rate   = rate ?? State.speechRate;
-    utt.volume = State.speechVolume;
-    window.speechSynthesis.speak(utt);
   }
 }
 
