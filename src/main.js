@@ -116,16 +116,45 @@ function getNextLevel(xp) {
 }
 
 // ────────────────────────────────────────────────────────────
-//  TTS
+//  TTS  (Google Cloud Neural2 → fallback Web Speech API)
 // ────────────────────────────────────────────────────────────
-function speak(text, rate) {
-  if (!window.speechSynthesis) return;
-  window.speechSynthesis.cancel();
-  const utt  = new SpeechSynthesisUtterance(text);
-  utt.lang   = 'ko-KR';
-  utt.rate   = rate ?? State.speechRate;
-  utt.volume = State.speechVolume;
-  window.speechSynthesis.speak(utt);
+const ttsCache = {};
+let currentAudio = null;
+
+async function speak(text, rate) {
+  if (!text) return;
+  const slow = rate != null && rate < 0.85;
+  const cacheKey = text + (slow ? '_slow' : '');
+
+  if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+
+  try {
+    let audioB64 = ttsCache[cacheKey];
+    if (!audioB64) {
+      const resp = await fetch('/api/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, slow }),
+      });
+      const data = await resp.json();
+      if (data.error) throw new Error(data.error);
+      audioB64 = data.audio;
+      ttsCache[cacheKey] = audioB64;
+    }
+    const audio = new Audio('data:audio/mp3;base64,' + audioB64);
+    audio.volume = State.speechVolume;
+    currentAudio = audio;
+    audio.play();
+  } catch {
+    // fallback to browser TTS
+    if (!window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    const utt  = new SpeechSynthesisUtterance(text);
+    utt.lang   = 'ko-KR';
+    utt.rate   = rate ?? State.speechRate;
+    utt.volume = State.speechVolume;
+    window.speechSynthesis.speak(utt);
+  }
 }
 
 // ────────────────────────────────────────────────────────────
