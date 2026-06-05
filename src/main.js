@@ -587,19 +587,14 @@ function showResult(isRight) {
   st.className   = 'result-status ' + (isRight ? 'correct' : 'wrong');
   $('practice-result-word').textContent    = w.korean;
   $('practice-result-meaning').textContent = w.rom ? `${w.meaning}  (${w.rom})` : w.meaning;
-  $('practice-example-korean').textContent  = w.example;
-  const exTrans = w.exTrans || (!w.fromApi ? w.exMeaning : '') || '';
+
+  // Generate level-appropriate example sentence via AI
+  const korEl     = $('practice-example-korean');
   const chineseEl = $('practice-example-chinese');
-  if (exTrans) {
-    chineseEl.textContent = exTrans;
-    chineseEl.style.display = '';
-  } else if (w.example) {
-    chineseEl.textContent = '翻译中...';
-    chineseEl.style.display = '';
-    autoTranslateExample(w.example, chineseEl);
-  } else {
-    chineseEl.style.display = 'none';
-  }
+  korEl.textContent     = '例句生成中...';
+  chineseEl.textContent = '';
+  chineseEl.style.display = 'none';
+  generateLevelSentence(w, korEl, chineseEl);
   // Reset AI panel
   $('practice-ai-result').classList.add('hidden');
   $('practice-ai-result').innerHTML = '';
@@ -1068,6 +1063,56 @@ function formatGroqResult(text) {
 // ────────────────────────────────────────────────────────────
 //  AUTO TRANSLATION (Baidu Fanyi)
 // ────────────────────────────────────────────────────────────
+// Cache: key = "wordId_level" or "korean_level"
+const sentenceCache = {};
+
+async function generateLevelSentence(w, korEl, chineseEl) {
+  const level = w.level || 1;
+  const cacheKey = (w.id || w.korean) + '_' + level;
+
+  // Use cached result if available
+  if (sentenceCache[cacheKey]) {
+    const cached = sentenceCache[cacheKey];
+    korEl.textContent = cached.sentence;
+    chineseEl.textContent = cached.translation;
+    chineseEl.style.display = '';
+    // Also update w so AI analyze can use it
+    w.example = cached.sentence;
+    w.exTrans = cached.translation;
+    return;
+  }
+
+  try {
+    const resp = await fetch('/api/ai-sentence', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ word: w.korean, meaning: w.meaning, pos: w.pos, level }),
+    });
+    const data = await resp.json();
+    if (data.error) throw new Error(data.error);
+
+    const sentence    = data.sentence || w.example || '';
+    const translation = data.translation || w.exMeaning || '';
+
+    sentenceCache[cacheKey] = { sentence, translation };
+    korEl.textContent = sentence;
+    chineseEl.textContent = translation;
+    chineseEl.style.display = sentence ? '' : 'none';
+    // Update w so AI analyze can use the fresh sentence
+    w.example = sentence;
+    w.exTrans = translation;
+  } catch {
+    // Fallback to static example
+    korEl.textContent = w.example || '';
+    if (w.exMeaning || w.exTrans) {
+      chineseEl.textContent = w.exTrans || w.exMeaning;
+      chineseEl.style.display = '';
+    } else {
+      chineseEl.style.display = 'none';
+    }
+  }
+}
+
 async function autoTranslateExample(text, el) {
   try {
     const resp = await fetch('/api/ai-example', {
