@@ -4,7 +4,7 @@
   "description": "",
   "type": "module",
   "scripts": {
-    "dev":   "vite",
+    "dev": "vite",
     "build": "vite build",
     "preview": "vite preview"
   },
@@ -12,6 +12,11 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@anthropic-ai/sdk": "^0.100.1",
+    "@google/generative-ai": "^0.24.1",
     "vite": "^8.0.16"
+  },
+  "dependencies": {
+    "romanize-korean": "^0.0.9"
   }
 }

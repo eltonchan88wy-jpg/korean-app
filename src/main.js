@@ -5,6 +5,7 @@
 
 import { VOCABULARY, POS_NAMES }      from './vocabulary.js';
 import { FIREBASE_CONFIG, FIREBASE_ENABLED } from './firebase-config.js';
+import romanize from 'romanize-korean';
 import apiWordsRaw from './data/api-words.json';
 const API_WORDS = Array.isArray(apiWordsRaw) ? apiWordsRaw : [];
 
@@ -848,8 +849,7 @@ function bindEvents() {
     const w = State.currentWord;
     if (!w) return;
     if (w.rom) { el.textContent = w.rom; return; }
-    el.textContent = '生成中...';
-    fetchRomanization(w).then(rom => { el.textContent = rom; });
+    el.textContent = fetchRomanization(w) || '（暂无）';
   });
   $('practice-input').addEventListener('keydown', e => {
     if (e.key === 'Enter') {
@@ -933,22 +933,13 @@ function bindEvents() {
   });
 }
 
-const romCache = {};
-async function fetchRomanization(w) {
-  if (romCache[w.korean]) return romCache[w.korean];
+function fetchRomanization(w) {
   try {
-    const resp = await fetch('/api/romanize', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ word: w.korean }),
-    });
-    const data = await resp.json();
-    const rom = data.result || '（暂无）';
-    romCache[w.korean] = rom;
-    w.rom = rom; // cache on word object too
+    const rom = romanize(w.korean) || '';
+    w.rom = rom;
     return rom;
   } catch {
-    return '（暂无）';
+    return '';
   }
 }
 
