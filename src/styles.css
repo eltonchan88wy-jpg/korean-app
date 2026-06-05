@@ -948,3 +948,38 @@ body {
   .card { padding: 24px; }
   .scroll-content { padding: 20px; padding-bottom: calc(var(--nav-h) + 20px); }
 }
+
+/* ===== DON'T KNOW BUTTON ===== */
+.dontknow-btn {
+  border: 1.5px solid var(--border);
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  padding: 0 18px;
+  white-space: nowrap;
+}
+.dontknow-btn:hover { background: #fef2f2; border-color: #fca5a5; color: #ef4444; }
+
+/* ===== EMOJI PICKER ===== */
+.emoji-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 6px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+.emoji-option {
+  background: none;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  font-size: 1.5rem;
+  padding: 4px;
+  cursor: pointer;
+  transition: all 0.15s;
+  line-height: 1;
+}
+.emoji-option:hover { background: #f3f4f6; }
+.emoji-option.selected { border-color: var(--primary); background: #eef2ff; }
+
+/* ===== HOME STATS (4 cards) ===== */
+.home-stats { flex-wrap: wrap; }
+.home-stat-card { min-width: calc(50% - 6px); }

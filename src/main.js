@@ -80,6 +80,7 @@ function getProfile() {
   return LS.get('profile', {
     username: 'Guest', score: 0, totalAnswered: 0, totalCorrect: 0,
     bestStreak: 0, activeLevels: [1, 2], wrongBank: {},
+    avatar: '🐱', bio: '', studyStreak: 0, lastStudyDate: '',
   });
 }
 
@@ -92,6 +93,8 @@ function saveProfile(p) {
       username: p.username, score: p.score,
       totalAnswered: p.totalAnswered, totalCorrect: p.totalCorrect,
       bestStreak: p.bestStreak, activeLevels: p.activeLevels,
+      avatar: p.avatar || '🐱', bio: p.bio || '',
+      studyStreak: p.studyStreak || 0, lastStudyDate: p.lastStudyDate || '',
       lastActive: firebase.firestore.FieldValue.serverTimestamp(),
     }, { merge: true }).catch(e => console.warn('Firestore write:', e));
   }
@@ -373,9 +376,10 @@ function initHome() {
   }
 
   const acc = p.totalAnswered > 0 ? Math.round(p.totalCorrect / p.totalAnswered * 100) : 0;
-  $('home-stat-answered').textContent = p.totalAnswered || 0;
-  $('home-stat-accuracy').textContent = acc + '%';
-  $('home-stat-streak').textContent   = p.bestStreak || 0;
+  $('home-stat-answered').textContent      = p.totalAnswered || 0;
+  $('home-stat-accuracy').textContent      = acc + '%';
+  $('home-stat-streak').textContent        = p.bestStreak || 0;
+  $('home-stat-study-streak').textContent  = p.studyStreak || 0;
 
   buildLevelCards();
   loadLeaderboard();
@@ -484,6 +488,7 @@ function nextWord(fromReview) {
   const inp = $('practice-input');
   inp.value = ''; inp.className = 'input input-korean'; inp.disabled = false;
   $('practice-submit').disabled = false;
+  $('practice-dontknow').disabled = false;
   $('practice-result').classList.add('hidden');
   $('practice-hint-rom').classList.add('hidden');
   $('practice-hint-btn').textContent = '💡 显示发音提示';
@@ -503,6 +508,25 @@ function nextWord(fromReview) {
 
   setTimeout(() => speak(w.korean), 300);
   setTimeout(() => inp.focus(), 350);
+}
+
+function dontKnow() {
+  if (!State.currentWord || State.resultShown) return;
+  State.resultShown = true;
+  $('practice-input').value = '';
+  $('practice-input').disabled = true;
+  $('practice-submit').disabled = true;
+  $('practice-dontknow').disabled = true;
+  $('practice-input').className = 'input input-korean wrong';
+  const p = getProfile();
+  p.totalAnswered = (p.totalAnswered || 0) + 1;
+  State.sessionWrong++;
+  State.sessionStreak = 0;
+  saveProfile(p);
+  addToWrongBank(State.currentWord.id);
+  recordStudyDay();
+  updateSessionStats();
+  showResult(false);
 }
 
 function submitAnswer() {
@@ -534,8 +558,20 @@ function submitAnswer() {
     saveProfile(p);
     addToWrongBank(State.currentWord.id);
   }
+  recordStudyDay();
   updateSessionStats();
   showResult(isRight);
+}
+
+function recordStudyDay() {
+  const p = getProfile();
+  const today = new Date().toISOString().slice(0, 10);
+  if (p.lastStudyDate === today) return;
+  const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+  p.studyStreak = p.lastStudyDate === yesterday ? (p.studyStreak || 0) + 1 : 1;
+  p.lastStudyDate = today;
+  saveProfile(p);
+  $('home-stat-study-streak').textContent = p.studyStreak;
 }
 
 function showResult(isRight) {
@@ -621,8 +657,8 @@ function loadFriends() {
       }
       snap.forEach(doc => {
         const d = doc.data();
-        State.friends.push({ uid: doc.id, username: d.username, score: d.score || 0 });
-        list.appendChild(friendItem(doc.id, d.username, d.score || 0, 'friend'));
+        State.friends.push({ uid: doc.id, username: d.username, score: d.score || 0, avatar: d.avatar || '👤' });
+        list.appendChild(friendItem(doc.id, d.username, d.score || 0, 'friend', d.avatar));
       });
     }).catch(() => { list.innerHTML = '<div style="color:var(--danger);text-align:center">加载失败</div>'; });
 }
@@ -666,9 +702,10 @@ function loadFriendLeaderboard() {
     }).catch(() => { lb.innerHTML = '<div style="color:var(--text-muted);font-size:0.82rem;text-align:center">加载失败</div>'; });
 }
 
-function friendItem(uid, username, score, type) {
+function friendItem(uid, username, score, type, avatar) {
   const div = document.createElement('div');
   div.className = 'friend-item';
+  const emo = avatar || '👤';
   const scoreHTML = score !== null ? `<div class="friend-score">✦ ${score} XP</div>` : '';
   const actHTML = type === 'request'
     ? `<div class="friend-actions">
@@ -678,8 +715,8 @@ function friendItem(uid, username, score, type) {
     : `<div class="friend-actions">
         <button class="friend-action-btn btn-remove" onclick="removeFriend('${uid}','${username}')">移除</button>
        </div>`;
-  div.innerHTML = `<div class="friend-avatar">👤</div>
-    <div class="friend-info"><div class="friend-name">${username}</div>${scoreHTML}</div>${actHTML}`;
+  div.innerHTML = `<div class="friend-avatar">${emo}</div>
+    <div class="friend-info"><div class="friend-name" onclick="viewFriendProfile('${uid}')" style="cursor:pointer;text-decoration:underline dotted">${username}</div>${scoreHTML}</div>${actHTML}`;
   return div;
 }
 
@@ -746,6 +783,7 @@ window.sendFriendRequest = (toUid, toUsername) => {
 // ────────────────────────────────────────────────────────────
 function initProfile() {
   const p = getProfile(), info = getLevelInfo(p.score || 0);
+  $('profile-avatar').textContent     = p.avatar || '🐱';
   $('profile-username').textContent   = p.username || 'Guest';
   $('profile-level-name').textContent = `${info.icon} Lv.${info.level} ${info.name}`;
   $('profile-score').textContent      = `✦ ${p.score || 0} 总积分`;
@@ -753,6 +791,10 @@ function initProfile() {
   $('profile-correct').textContent    = p.totalCorrect  || 0;
   $('profile-acc').textContent        = p.totalAnswered > 0 ? Math.round(p.totalCorrect/p.totalAnswered*100)+'%' : '0%';
   $('profile-streak').textContent     = p.bestStreak || 0;
+
+  const bioDisplay = $('profile-bio-display');
+  bioDisplay.textContent  = p.bio || '还没有简介，点击编辑添加吧~';
+  bioDisplay.style.fontStyle = p.bio ? 'normal' : 'italic';
 
   const list = $('profile-level-list'); list.innerHTML = '';
   LEVELS_SYSTEM.forEach(l => {
@@ -768,9 +810,14 @@ function initProfile() {
     list.appendChild(div);
   });
 
+  const isLoggedIn = FIREBASE_ENABLED && State.user && !State.user.isGuest;
+  $('profile-bio-edit-btn').classList.toggle('hidden', !isLoggedIn);
+  $('profile-bio-display').classList.remove('hidden');
+  $('profile-bio-edit').classList.add('hidden');
+
   const changeUsernameBtn = $('profile-change-username-btn');
   if (changeUsernameBtn) {
-    if (FIREBASE_ENABLED && State.user && !State.user.isGuest) {
+    if (isLoggedIn) {
       changeUsernameBtn.classList.remove('hidden');
       changeUsernameBtn.onclick = () => {
         $('username-input-new').value = getProfile().username || '';
@@ -783,7 +830,7 @@ function initProfile() {
   }
 
   const logoutBtn = $('profile-logout-btn');
-  if (FIREBASE_ENABLED && State.user && !State.user.isGuest) {
+  if (isLoggedIn) {
     logoutBtn.classList.remove('hidden');
     logoutBtn.onclick = () => {
       State.user = null;
@@ -886,9 +933,45 @@ function bindEvents() {
     }
   });
   $('practice-submit').addEventListener('click', submitAnswer);
+  $('practice-dontknow').addEventListener('click', dontKnow);
   $('practice-next-btn').addEventListener('click', () => nextWord(State.isReviewMode && State.reviewQueue.length > 0));
   $('practice-play-example').addEventListener('click', () => State.currentWord && speak(State.currentWord.example, State.speechRate * 0.9));
   $('practice-ai-analyze').addEventListener('click', () => { if (State.currentWord) analyzeWord(State.currentWord); });
+
+  // Emoji picker
+  $('emoji-picker-cancel').addEventListener('click', () => $('modal-emoji-picker').classList.add('hidden'));
+
+  // Friend profile modal close
+  $('fp-close').addEventListener('click', () => $('modal-friend-profile').classList.add('hidden'));
+
+  // Bio edit
+  $('profile-bio-edit-btn').addEventListener('click', () => {
+    const p = getProfile();
+    $('profile-bio-input').value = p.bio || '';
+    $('profile-bio-count').textContent = (p.bio || '').length + '/100';
+    $('profile-bio-display').classList.add('hidden');
+    $('profile-bio-edit-btn').classList.add('hidden');
+    $('profile-bio-edit').classList.remove('hidden');
+  });
+  $('profile-bio-input').addEventListener('input', () => {
+    $('profile-bio-count').textContent = $('profile-bio-input').value.length + '/100';
+  });
+  $('profile-bio-cancel').addEventListener('click', () => {
+    $('profile-bio-edit').classList.add('hidden');
+    $('profile-bio-display').classList.remove('hidden');
+    $('profile-bio-edit-btn').classList.remove('hidden');
+  });
+  $('profile-bio-save').addEventListener('click', () => {
+    const p = getProfile();
+    p.bio = $('profile-bio-input').value.trim();
+    saveProfile(p);
+    $('profile-bio-display').textContent = p.bio || '还没有简介，点击编辑添加吧~';
+    $('profile-bio-display').style.fontStyle = p.bio ? 'normal' : 'italic';
+    $('profile-bio-edit').classList.add('hidden');
+    $('profile-bio-display').classList.remove('hidden');
+    $('profile-bio-edit-btn').classList.remove('hidden');
+    showToast('简介已保存！');
+  });
 
   // Review
   $('review-start-btn').addEventListener('click', () => {
@@ -1075,6 +1158,67 @@ async function analyzeWord(w) {
   }
   btn.textContent = '✨ AI 分析';
 }
+
+// ────────────────────────────────────────────────────────────
+//  EMOJI AVATAR PICKER
+// ────────────────────────────────────────────────────────────
+const EMOJI_LIST = [
+  '🐱','🐶','🐼','🐨','🐸','🦊','🐰','🦁','🐯','🐺',
+  '🦝','🦉','🦋','🐠','🐧','🦄','🐲','🌸','⭐','🌈',
+  '🎵','🎨','🏆','💎','🚀','🌙','☀️','🍀','🎯','👑',
+  '🌺','🌻','🍓','🎸','📚','🎭','🎪','🔥','💫','🌊',
+];
+
+window.openEmojiPicker = function() {
+  const p = getProfile();
+  if (!p.username || p.username === 'Guest') { showToast('请先登录后再设置头像'); return; }
+  const grid = $('emoji-grid');
+  grid.innerHTML = '';
+  EMOJI_LIST.forEach(e => {
+    const btn = document.createElement('button');
+    btn.className = 'emoji-option' + (e === (p.avatar || '🐱') ? ' selected' : '');
+    btn.textContent = e;
+    btn.onclick = () => {
+      p.avatar = e;
+      saveProfile(p);
+      $('profile-avatar').textContent = e;
+      $('modal-emoji-picker').classList.add('hidden');
+      showToast('头像已更新！');
+    };
+    grid.appendChild(btn);
+  });
+  $('modal-emoji-picker').classList.remove('hidden');
+};
+
+// ────────────────────────────────────────────────────────────
+//  FRIEND PROFILE VIEW
+// ────────────────────────────────────────────────────────────
+window.viewFriendProfile = function(uid) {
+  if (!FIREBASE_ENABLED) return;
+  $('fp-avatar').textContent  = '⏳';
+  $('fp-username').textContent = '加载中...';
+  $('fp-level').textContent   = '';
+  $('fp-bio').textContent     = '';
+  $('fp-accuracy').textContent = '—';
+  $('fp-streak').textContent  = '—';
+  $('fp-score').textContent   = '—';
+  $('modal-friend-profile').classList.remove('hidden');
+
+  firebase.firestore().collection('users').doc(uid).get().then(doc => {
+    if (!doc.exists) { $('fp-username').textContent = '用户不存在'; return; }
+    const d = doc.data();
+    const info = getLevelInfo(d.score || 0);
+    const acc  = d.totalAnswered > 0 ? Math.round(d.totalCorrect / d.totalAnswered * 100) : 0;
+    $('fp-avatar').textContent   = d.avatar || '👤';
+    $('fp-username').textContent = d.username || '—';
+    $('fp-level').textContent    = `${info.icon} Lv.${info.level} ${info.name}`;
+    $('fp-bio').textContent      = d.bio || '这个人很神秘，什么都没写~';
+    $('fp-bio').style.fontStyle  = d.bio ? 'normal' : 'italic';
+    $('fp-accuracy').textContent = acc + '%';
+    $('fp-streak').textContent   = (d.studyStreak || 0) + '天';
+    $('fp-score').textContent    = d.score || 0;
+  }).catch(() => { $('fp-username').textContent = '加载失败'; });
+};
 
 // ────────────────────────────────────────────────────────────
 //  ENTRY POINT

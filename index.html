@@ -135,6 +135,10 @@
         <div class="home-stat-num" id="home-stat-streak">0</div>
         <div class="home-stat-name">🔥 最高连击</div>
       </div>
+      <div class="home-stat-card">
+        <div class="home-stat-num" id="home-stat-study-streak">0</div>
+        <div class="home-stat-name">📅 连续打卡</div>
+      </div>
     </div>
 
     <!-- Leaderboard preview -->
@@ -216,7 +220,10 @@
         <div class="input-tip">💡 手机切换韩文键盘 · 电脑可用搜狗/微软韩文输入法 · 按 Enter 提交</div>
       </div>
 
-      <button class="btn btn-primary" id="practice-submit">提交答案</button>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-primary" id="practice-submit" style="flex:1">提交答案</button>
+        <button class="btn btn-ghost dontknow-btn" id="practice-dontknow">不知道</button>
+      </div>
 
       <!-- Result area -->
       <div class="result-area hidden" id="practice-result">
@@ -359,7 +366,8 @@
   </div>
   <div class="scroll-content">
     <div class="profile-hero">
-      <div class="profile-avatar">🧑‍🎓</div>
+      <div class="profile-avatar" id="profile-avatar" onclick="openEmojiPicker()" title="点击更换头像">🧑‍🎓</div>
+      <div style="font-size:0.72rem;color:rgba(255,255,255,0.6);margin-top:-6px;margin-bottom:6px">点击更换头像</div>
       <div class="profile-username" id="profile-username">Guest</div>
       <div class="profile-level-name" id="profile-level-name">🌱 Lv.1 韩语新手</div>
       <div style="font-size:1.1rem;font-weight:700;color:#fde68a;margin-bottom:14px" id="profile-score">✦ 0 总积分</div>
@@ -386,6 +394,24 @@
     <div class="card">
       <div style="font-weight:700;font-size:0.95rem;margin-bottom:12px">🏅 等级系统</div>
       <div id="profile-level-list"></div>
+    </div>
+
+    <!-- Bio section -->
+    <div class="card" style="margin-bottom:10px">
+      <div style="font-weight:700;font-size:0.95rem;margin-bottom:8px">💬 个人简介</div>
+      <div id="profile-bio-display" style="color:var(--text-muted);font-size:0.9rem;min-height:32px"></div>
+      <div id="profile-bio-edit" class="hidden" style="margin-top:8px">
+        <textarea id="profile-bio-input" class="input" maxlength="100" rows="3"
+          style="resize:none;font-size:0.9rem" placeholder="介绍一下自己吧（最多100字）"></textarea>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px">
+          <span id="profile-bio-count" style="font-size:0.75rem;color:var(--text-muted)">0/100</span>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-ghost" id="profile-bio-cancel" style="padding:4px 12px;font-size:0.82rem">取消</button>
+            <button class="btn btn-primary" id="profile-bio-save" style="padding:4px 12px;font-size:0.82rem">保存</button>
+          </div>
+        </div>
+      </div>
+      <button class="btn btn-ghost hidden" id="profile-bio-edit-btn" style="margin-top:8px;padding:4px 12px;font-size:0.82rem">✏️ 编辑简介</button>
     </div>
 
     <button class="btn btn-ghost mt-3 hidden" id="profile-change-username-btn" style="margin-bottom:8px">✏️ &nbsp;修改用户名</button>
@@ -490,6 +516,43 @@
   </div>
 </div>
 
+<!-- ================================================
+     MODAL: EMOJI AVATAR PICKER
+     ================================================ -->
+<div class="modal-overlay hidden" id="modal-emoji-picker">
+  <div class="modal" style="max-width:340px">
+    <h2 class="modal-title" style="margin-bottom:12px">选择头像</h2>
+    <div class="emoji-grid" id="emoji-grid"></div>
+    <button class="btn btn-ghost" id="emoji-picker-cancel" style="margin-top:12px;width:100%">取消</button>
+  </div>
+</div>
+
+<!-- ================================================
+     MODAL: FRIEND PROFILE
+     ================================================ -->
+<div class="modal-overlay hidden" id="modal-friend-profile">
+  <div class="modal" style="max-width:320px">
+    <div id="fp-avatar" style="font-size:3rem;text-align:center;margin-bottom:6px">👤</div>
+    <h2 class="modal-title" id="fp-username" style="margin-bottom:2px"></h2>
+    <div id="fp-level" style="font-size:0.85rem;color:var(--text-muted);margin-bottom:10px;text-align:center"></div>
+    <div id="fp-bio" style="font-size:0.88rem;color:var(--text);text-align:center;min-height:20px;margin-bottom:14px;padding:0 8px"></div>
+    <div style="display:flex;justify-content:space-around;margin-bottom:16px">
+      <div style="text-align:center">
+        <div style="font-size:1.3rem;font-weight:800;color:var(--primary)" id="fp-accuracy">—</div>
+        <div style="font-size:0.72rem;color:var(--text-muted)">正确率</div>
+      </div>
+      <div style="text-align:center">
+        <div style="font-size:1.3rem;font-weight:800;color:var(--primary)" id="fp-streak">—</div>
+        <div style="font-size:0.72rem;color:var(--text-muted)">连续打卡</div>
+      </div>
+      <div style="text-align:center">
+        <div style="font-size:1.3rem;font-weight:800;color:var(--primary)" id="fp-score">—</div>
+        <div style="font-size:0.72rem;color:var(--text-muted)">总XP</div>
+      </div>
+    </div>
+    <button class="btn btn-ghost" id="fp-close" style="width:100%">关闭</button>
+  </div>
+</div>
 
 </body>
 </html>
