@@ -530,6 +530,12 @@ function showResult(isRight) {
   } else {
     chineseEl.style.display = 'none';
   }
+  // Reset AI panel
+  $('practice-ai-result').classList.add('hidden');
+  $('practice-ai-result').innerHTML = '';
+  const aiBtn = $('practice-ai-analyze');
+  aiBtn.disabled = false;
+  aiBtn.textContent = '✨ AI 分析';
 }
 
 function updateSessionStats() {
@@ -849,6 +855,7 @@ function bindEvents() {
   $('practice-submit').addEventListener('click', submitAnswer);
   $('practice-next-btn').addEventListener('click', () => nextWord(State.isReviewMode && State.reviewQueue.length > 0));
   $('practice-play-example').addEventListener('click', () => State.currentWord && speak(State.currentWord.example, State.speechRate * 0.9));
+  $('practice-ai-analyze').addEventListener('click', () => { if (State.currentWord) analyzeWord(State.currentWord); });
 
   // Review
   $('review-start-btn').addEventListener('click', () => {
@@ -938,6 +945,59 @@ async function autoTranslateExample(text, el) {
     el.textContent = '';
     el.style.display = 'none';
   }
+}
+
+// ────────────────────────────────────────────────────────────
+//  AI WORD ANALYSIS
+// ────────────────────────────────────────────────────────────
+const POS_MAP = {
+  n: '名词', v: '动词', adj: '形容词', adv: '副词',
+  conj: '连接词', det: '冠词/限定词', prep: '介词',
+  pron: '代词', num: '数词', intj: '感叹词', aux: '助动词',
+};
+
+async function analyzeWord(w) {
+  const btn = $('practice-ai-analyze');
+  const box = $('practice-ai-result');
+  btn.disabled = true;
+  btn.textContent = '分析中...';
+  box.classList.remove('hidden');
+  box.innerHTML = '<span class="ai-loading">分析中...</span>';
+
+  // Get example translation (may already be visible)
+  const existingTrans = w.exTrans || (!w.fromApi ? w.exMeaning : '') || '';
+  let exampleTrans = existingTrans || $('practice-example-chinese').textContent;
+  if (!exampleTrans || exampleTrans === '翻译中...') {
+    try {
+      const resp = await fetch('/api/ai-example', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: w.example }),
+      });
+      const data = await resp.json();
+      exampleTrans = data.result || '';
+    } catch { exampleTrans = ''; }
+  }
+
+  const posLabel = POS_MAP[w.pos] || w.pos || '';
+  const highlighted = w.example
+    ? w.example.replace(new RegExp(w.korean.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'),
+        `<strong style="color:#7c3aed">${w.korean}</strong>`)
+    : '';
+
+  let html = '';
+  if (highlighted) {
+    html += `<div class="ai-section-title">📝 例句</div>`;
+    html += `<div style="font-family:'Noto Sans KR',sans-serif;font-size:1rem;line-height:1.6">${highlighted}</div>`;
+    if (exampleTrans) html += `<div style="color:#4b5563;margin-top:2px">${exampleTrans}</div>`;
+  }
+  html += `<div class="ai-section-title" style="margin-top:10px">📖 单词信息</div>`;
+  if (posLabel) html += `<div>词性：${posLabel}</div>`;
+  html += `<div>含义：${w.meaning}</div>`;
+  if (w.rom)  html += `<div>罗马音：${w.rom}</div>`;
+
+  box.innerHTML = html;
+  btn.textContent = '✨ AI 分析';
 }
 
 // ────────────────────────────────────────────────────────────
