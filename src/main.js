@@ -516,7 +516,7 @@ function showResult(isRight) {
   st.textContent = isRight ? '✅ 答对了！+XP' : '❌ 答错了';
   st.className   = 'result-status ' + (isRight ? 'correct' : 'wrong');
   $('practice-result-word').textContent    = w.korean;
-  $('practice-result-meaning').textContent = `${w.meaning}  (${w.rom})`;
+  $('practice-result-meaning').textContent = w.rom ? `${w.meaning}  (${w.rom})` : w.meaning;
   $('practice-example-korean').textContent  = w.example;
   const exTrans = w.exTrans || (!w.fromApi ? w.exMeaning : '') || '';
   const chineseEl = $('practice-example-chinese');
@@ -842,7 +842,7 @@ function bindEvents() {
   $('practice-hint-btn').addEventListener('click', () => {
     State.hintShown = !State.hintShown;
     const el = $('practice-hint-rom');
-    el.textContent = State.hintShown ? (State.currentWord?.rom || '') : '';
+    el.textContent = State.hintShown ? (State.currentWord?.rom || '（暂无罗马音）') : '';
     el.classList.toggle('hidden', !State.hintShown);
     $('practice-hint-btn').textContent = State.hintShown ? '💡 隐藏发音提示' : '💡 显示发音提示';
   });
