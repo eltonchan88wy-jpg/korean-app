@@ -1064,19 +1064,11 @@ function formatGroqResult(text) {
 //  AUTO TRANSLATION (Baidu Fanyi)
 // ────────────────────────────────────────────────────────────
 // AI Cache — localStorage (L1) + Firestore (L2 shared across users)
-const CACHE_VERSION      = 'v2';
 const CACHE_KEY_SENTENCE = 'aiCache_sentence';
 const CACHE_KEY_ANALYZE  = 'aiCache_analyze';
 
 function lsLoad(k) { try { return JSON.parse(localStorage.getItem(k) || '{}'); } catch { return {}; } }
 function lsSave(k, obj) { try { localStorage.setItem(k, JSON.stringify(obj)); } catch {} }
-
-// Clear old caches if version changed
-if (localStorage.getItem('aiCacheVersion') !== CACHE_VERSION) {
-  localStorage.removeItem(CACHE_KEY_SENTENCE);
-  localStorage.removeItem(CACHE_KEY_ANALYZE);
-  localStorage.setItem('aiCacheVersion', CACHE_VERSION);
-}
 
 const sentenceCache = lsLoad(CACHE_KEY_SENTENCE);
 const analyzeCache  = lsLoad(CACHE_KEY_ANALYZE);
@@ -1092,12 +1084,12 @@ async function fsSet(docId, data) {
   try { await db.collection('aiCache').doc(docId).set(data); } catch {}
 }
 
-function generateLevelSentence(w, korEl, chineseEl) {
+async function generateLevelSentence(w, korEl, chineseEl) {
   const level = w.level || 1;
   const localKey = (w.id || w.korean) + '_' + level;
   const fsKey    = 's_' + localKey;
 
-  // L1: localStorage — instant, no await needed
+  // L1: localStorage
   if (sentenceCache[localKey]) {
     const c = sentenceCache[localKey];
     korEl.textContent = c.sentence; chineseEl.textContent = c.translation; chineseEl.style.display = '';
@@ -1105,45 +1097,37 @@ function generateLevelSentence(w, korEl, chineseEl) {
     return;
   }
 
-  // Show loading immediately, then fetch in background (non-blocking)
-  korEl.textContent = '例句生成中...';
-  chineseEl.style.display = 'none';
+  // L2: Firestore shared cache
+  const remote = await fsGet(fsKey);
+  if (remote?.sentence) {
+    sentenceCache[localKey] = remote; lsSave(CACHE_KEY_SENTENCE, sentenceCache);
+    korEl.textContent = remote.sentence; chineseEl.textContent = remote.translation; chineseEl.style.display = '';
+    w.example = remote.sentence; w.exTrans = remote.translation;
+    return;
+  }
 
-  (async () => {
-    try {
-      // L2: Firestore shared cache
-      const remote = await fsGet(fsKey);
-      if (remote?.sentence) {
-        sentenceCache[localKey] = remote; lsSave(CACHE_KEY_SENTENCE, sentenceCache);
-        korEl.textContent = remote.sentence; chineseEl.textContent = remote.translation; chineseEl.style.display = '';
-        w.example = remote.sentence; w.exTrans = remote.translation;
-        return;
-      }
+  // L3: Call AI, then write back to both caches
+  try {
+    const resp = await fetch('/api/ai-sentence', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ word: w.korean, meaning: w.meaning, pos: w.pos, level }),
+    });
+    const data = await resp.json();
+    if (data.error) throw new Error(data.error);
 
-      // L3: Call AI
-      const resp = await fetch('/api/ai-sentence', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ word: w.korean, meaning: w.meaning, pos: w.pos, level }),
-      });
-      const data = await resp.json();
-      if (data.error) throw new Error(data.error);
+    const entry = { sentence: data.sentence || w.example || '', translation: data.translation || w.exMeaning || '' };
+    sentenceCache[localKey] = entry; lsSave(CACHE_KEY_SENTENCE, sentenceCache);
+    fsSet(fsKey, entry); // fire-and-forget
 
-      const entry = { sentence: data.sentence || '', translation: data.translation || '' };
-      sentenceCache[localKey] = entry; lsSave(CACHE_KEY_SENTENCE, sentenceCache);
-      fsSet(fsKey, entry);
-
-      korEl.textContent = entry.sentence;
-      chineseEl.textContent = entry.translation;
-      chineseEl.style.display = entry.sentence ? '' : 'none';
-      w.example = entry.sentence; w.exTrans = entry.translation;
-    } catch {
-      // Fallback to static example
-      korEl.textContent = w.example || '';
-      if (w.exMeaning || w.exTrans) { chineseEl.textContent = w.exTrans || w.exMeaning; chineseEl.style.display = ''; }
-      else chineseEl.style.display = 'none';
-    }
-  })();
+    korEl.textContent = entry.sentence; chineseEl.textContent = entry.translation;
+    chineseEl.style.display = entry.sentence ? '' : 'none';
+    w.example = entry.sentence; w.exTrans = entry.translation;
+  } catch {
+    korEl.textContent = w.example || '';
+    if (w.exMeaning || w.exTrans) { chineseEl.textContent = w.exTrans || w.exMeaning; chineseEl.style.display = ''; }
+    else chineseEl.style.display = 'none';
+  }
 }
 
 async function autoTranslateExample(text, el) {
