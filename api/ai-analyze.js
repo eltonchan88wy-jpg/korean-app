@@ -15,20 +15,21 @@ export default async function handler(req) {
   const { word, meaning, pos, example, exampleTrans } = body;
   if (!word) return new Response(JSON.stringify({ error: 'Missing word' }), { status: 400 });
 
-  const prompt = `你是韩语教学助手，请用中文对以下内容做简洁的学习分析。只输出分析内容，不要多余解释，不要用markdown标题符号（#），不要混入英文或其他语言。
+  const prompt = `你是韩语教学助手，请用中文对以下内容做简洁的学习分析。
+注意：只输出下面要求的两个部分，不要输出词典解释、单词定义或其他内容，不要用markdown标题符号（#），不要混入英文或其他语言。
 
 单词：${word}（${meaning || ''}）
 ${pos ? `词性：${pos}` : ''}
-${example ? `例句：${example}` : ''}
-${exampleTrans ? `例句翻译：${exampleTrans}` : ''}
+${example ? `例句（韩文）：${example}` : ''}
+${exampleTrans ? `例句（中文）：${exampleTrans}` : ''}
 
 请输出以下两个部分：
 
 [语法要点]
-用"•"开头，列出例句中1~2个最值得学习的语法点或用法，说明含义和用法。
+用"•"开头，针对上面的韩文例句，列出1~2个最值得学习的语法点（如助词用法、语尾变化、句型结构等），说明含义和用法。
 
 [学习提示]
-一句话：记忆这个单词的小技巧或常见搭配。`;
+一句话：帮助记忆"${word}"这个单词的小技巧或最常见搭配。`;
 
   try {
     const resp = await fetch(
