@@ -643,6 +643,14 @@ body {
 .example-label { font-size: 0.72rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
 .example-korean { font-size: 1.05rem; font-family: 'Noto Sans KR', sans-serif; font-weight: 600; color: var(--text); margin-bottom: 4px; }
 .example-chinese { font-size: 0.88rem; color: var(--text-muted); margin-bottom: 10px; }
+.example-btn-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.example-btn-row .report-sentence-btn {
+  margin-left: auto;
+}
 .play-example-btn {
   background: none;
   border: 1.5px solid var(--border);
@@ -678,7 +686,6 @@ body {
   cursor: pointer;
   color: #dc2626;
   transition: all 0.2s;
-  margin-left: 6px;
 }
 .report-sentence-btn:hover { background: #fef2f2; }
 .report-sentence-btn:disabled { opacity: 0.5; cursor: not-allowed; }
