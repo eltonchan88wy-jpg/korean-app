@@ -419,54 +419,22 @@ function initAuth() {
     el.addEventListener('keydown', e => { if (e.key === 'Enter') $('auth-login-btn').click(); }));
 
   $('forgot-pass-btn').onclick = () => {
-    $('fp-username').value = '';
-    $('fp-email').value = $('login-email').value.trim();
-    $('fp-newpass').value = '';
-    $('fp-error').classList.add('hidden');
-    $('fp-submit-btn').textContent = '确认重置';
-    $('fp-submit-btn').disabled = false;
-    $('modal-forgot-password').classList.remove('hidden');
-  };
-
-  $('fp-cancel-btn').onclick = () => $('modal-forgot-password').classList.add('hidden');
-
-  $('fp-submit-btn').onclick = async () => {
-    const username = $('fp-username').value.trim();
-    const email    = $('fp-email').value.trim();
-    const newpass  = $('fp-newpass').value;
-    const errEl    = $('fp-error');
-    errEl.classList.add('hidden');
-
-    if (!username || !email || !newpass) { errEl.textContent = '请填写所有字段'; errEl.classList.remove('hidden'); return; }
-    if (newpass.length < 6) { errEl.textContent = '新密码至少6位'; errEl.classList.remove('hidden'); return; }
-
-    $('fp-submit-btn').textContent = '验证中...';
-    $('fp-submit-btn').disabled = true;
-
-    try {
-      const resp = await fetch('/api/reset-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, email, newPassword: newpass }),
+    const email = $('login-email').value.trim();
+    if (!email) { showAuthError('请先输入你的邮箱，再点忘记密码'); return; }
+    firebase.auth().sendPasswordResetEmail(email)
+      .then(() => {
+        clearAuthError();
+        const btn = $('forgot-pass-btn');
+        btn.textContent = '✅ 重置邮件已发送，请查收';
+        btn.style.color = 'var(--success, #10b981)';
+        btn.disabled = true;
+      })
+      .catch(e => {
+        const msg = e.code === 'auth/user-not-found' ? '该邮箱未注册'
+                  : e.code === 'auth/invalid-email'  ? '邮箱格式不正确'
+                  : '发送失败，请稍后再试';
+        showAuthError(msg);
       });
-      const data = await resp.json();
-      if (data.ok) {
-        $('modal-forgot-password').classList.add('hidden');
-        $('login-email').value = email;
-        showAuthError('✅ 密码已重置，请用新密码登录');
-        $('auth-error').style.color = 'var(--success, #10b981)';
-      } else {
-        errEl.textContent = data.error || '重置失败，请重试';
-        errEl.classList.remove('hidden');
-        $('fp-submit-btn').textContent = '确认重置';
-        $('fp-submit-btn').disabled = false;
-      }
-    } catch {
-      errEl.textContent = '网络错误，请稍后再试';
-      errEl.classList.remove('hidden');
-      $('fp-submit-btn').textContent = '确认重置';
-      $('fp-submit-btn').disabled = false;
-    }
   };
 }
 
