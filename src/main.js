@@ -682,12 +682,19 @@ function showResult(isRight) {
   $('practice-result-word').textContent    = w.korean;
   $('practice-result-meaning').textContent = w.rom ? `${w.meaning}  (${w.rom})` : w.meaning;
 
-  // 显示例句：先用词库自带的兜底，await Promise 完成后自动替换
+  // 词典释义（중국어 대역어 뜻풀이）：显示在词义下方作为补充说明
+  const defEl = $('practice-result-definition');
+  if (defEl) {
+    defEl.textContent = w.exMeaning || '';
+    defEl.style.display = w.exMeaning ? '' : 'none';
+  }
+
+  // 例句：全部用 Groq 生成，不使用本地词典例句
   const korEl     = $('practice-example-korean');
   const chineseEl = $('practice-example-chinese');
-  korEl.textContent     = w.example || '例句生成中...';
-  chineseEl.textContent = w.exTrans || w.exMeaning || '';
-  chineseEl.style.display = (w.exTrans || w.exMeaning) ? '' : 'none';
+  korEl.textContent     = '例句生成中...';
+  chineseEl.textContent = '';
+  chineseEl.style.display = 'none';
   generateLevelSentence(w, korEl, chineseEl);
   // Reset AI panel
   $('practice-ai-result').classList.add('hidden');
@@ -1227,18 +1234,15 @@ function prefetchSentence(w) {
           return entry;
         });
     })
-    .catch(() => ({
-      sentence: w.example || '',
-      translation: w.exTrans || w.exMeaning || '',
-    }));
+    .catch(() => ({ sentence: '', translation: '' }));
 }
 
 async function generateLevelSentence(w, korEl, chineseEl) {
   // 直接 await 已经在后台跑着的 Promise
   const entry = await (State.sentencePromise || prefetchSentence(w));
-  const sentence    = entry.sentence    || w.example    || '';
-  const translation = entry.translation || w.exTrans    || w.exMeaning || '';
-  korEl.textContent = sentence;
+  const sentence    = entry.sentence    || '';
+  const translation = entry.translation || '';
+  korEl.textContent = sentence || '（例句生成失败，请重试）';
   chineseEl.textContent = translation;
   chineseEl.style.display = translation ? '' : 'none';
   if (sentence)    w.example = sentence;

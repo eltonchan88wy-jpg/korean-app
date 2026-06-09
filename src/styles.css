@@ -630,7 +630,8 @@ body {
   color: var(--text);
   margin-bottom: 4px;
 }
-.result-meaning-small { text-align: center; color: var(--text-muted); font-size: 0.9rem; margin-bottom: 14px; }
+.result-meaning-small { text-align: center; color: var(--text-muted); font-size: 0.9rem; margin-bottom: 4px; }
+.result-definition { text-align: center; color: var(--text-muted); font-size: 0.8rem; margin-bottom: 14px; line-height: 1.5; padding: 0 8px; }
 .example-box {
   background: #f8fafc;
   border: 1px solid var(--border);
