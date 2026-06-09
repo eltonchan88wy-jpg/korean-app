@@ -1199,19 +1199,33 @@ function prefetchSentence(w) {
     return Promise.resolve(lsAll[localKey]);
   }
 
-  // L3: 直接调 Groq（去掉 Firestore，省掉 300-800ms 等待）
-  return fetch('/api/ai-sentence', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ word: w.korean, meaning: w.meaning, pos: w.pos, level }),
-  })
-    .then(r => r.json())
-    .then(data => {
-      if (data.error) throw new Error(data.error);
-      const entry = { sentence: data.sentence || '', translation: data.translation || '' };
-      sentenceCache[localKey] = entry;
-      lsSave(CACHE_KEY_SENTENCE, { ...lsLoad(CACHE_KEY_SENTENCE), [localKey]: entry });
-      return entry;
+  // L3: Firestore 共享缓存（所有用户共享，A 生成过 B 直接用）
+  // 读取是异步的，但因为 prefetchSentence 在词出现时就启动，
+  // 这 300-500ms 完全藏在用户答题时间里，感知不到
+  const fsKey = 's_' + localKey;
+  return fsGet(fsKey)
+    .then(remote => {
+      if (remote?.sentence) {
+        // Firestore 命中：存入本地缓存，直接返回
+        sentenceCache[localKey] = remote;
+        lsSave(CACHE_KEY_SENTENCE, { ...lsLoad(CACHE_KEY_SENTENCE), [localKey]: remote });
+        return remote;
+      }
+      // L4: Firestore 也没有，才调 Groq
+      return fetch('/api/ai-sentence', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ word: w.korean, meaning: w.meaning, pos: w.pos, level }),
+      })
+        .then(r => r.json())
+        .then(data => {
+          if (data.error) throw new Error(data.error);
+          const entry = { sentence: data.sentence || '', translation: data.translation || '' };
+          sentenceCache[localKey] = entry;
+          lsSave(CACHE_KEY_SENTENCE, { ...lsLoad(CACHE_KEY_SENTENCE), [localKey]: entry });
+          fsSet(fsKey, entry); // fire-and-forget 写入 Firestore，下次任何用户都能命中
+          return entry;
+        });
     })
     .catch(() => ({
       sentence: w.example || '',
