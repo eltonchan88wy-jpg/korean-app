@@ -479,6 +479,20 @@
       </div>
       <hr class="divider"/>
       <div class="setting-section">
+        <h3>📡 词库 API（国立国语院）</h3>
+        <div id="krdict-status" style="font-size:0.85rem;margin-bottom:12px;padding:10px;background:var(--bg);border-radius:var(--radius-xs)">检测中...</div>
+        <div style="font-size:0.8rem;color:var(--text-muted);line-height:1.6">
+          申请免费 API Key：<br>
+          <a href="https://krdict.korean.go.kr/openApi/openApiInfo" target="_blank" style="color:var(--primary)">krdict.korean.go.kr</a>
+          → 注册 → 인증키 신청<br>
+          申请后将 Key 写入项目根目录的 <code>.env</code> 文件：<br>
+          <code style="background:#f1f5f9;padding:2px 6px;border-radius:4px;font-size:0.78rem">VITE_KRDICT_KEY=你的key</code>
+        </div>
+      </div>
+      <div class="setting-section" style="margin-top:0">
+      </div>
+      <hr class="divider"/>
+      <div class="setting-section">
         <h3>⚠️ 数据管理</h3>
         <button class="btn btn-danger" id="settings-reset-btn">重置所有学习进度</button>
       </div>
@@ -525,21 +539,6 @@
     <h2 class="modal-title">升级了！</h2>
     <p class="modal-sub" id="modal-level-text">恭喜升级！</p>
     <button class="btn btn-primary" id="modal-close-btn">继续加油！</button>
-  </div>
-</div>
-
-<!-- ================================================
-     MODAL: GUEST LIMIT
-     ================================================ -->
-<div class="modal-overlay hidden" id="modal-guest-limit">
-  <div class="modal">
-    <div class="modal-emoji">🐾</div>
-    <h2 class="modal-title">体验结束啦～</h2>
-    <p class="modal-sub">你已免费体验了 <strong>10 个词汇练习</strong>！<br/>注册账号后可以解锁全部 5000+ 词库、错题本、好友挑战等功能。</p>
-    <div style="display:flex;flex-direction:column;gap:10px;margin-top:4px">
-      <button class="btn btn-primary" id="guest-limit-register-btn">📝 立即注册（免费）</button>
-      <button class="btn btn-ghost" id="guest-limit-cancel-btn" style="font-size:0.85rem;color:var(--text-muted)">先不了，返回主页</button>
-    </div>
   </div>
 </div>
 
