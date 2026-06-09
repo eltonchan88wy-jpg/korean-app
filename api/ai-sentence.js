@@ -77,6 +77,7 @@ Rules:
 - If 3rd person name is needed, use "유진이" only (Chinese: 俞真尼). Never use 지수, 민준, or other names
 - Korean grammar must be 100% correct — check particles (조사) and sentence structure carefully
 - Chinese translation must sound natural to native Chinese speakers, not word-for-word
+- CRITICAL for kinship/relationship words: preserve the correct direction — 누나/언니 = 姐姐 (older sister), 오빠/형 = 哥哥 (older brother), 동생 = 弟弟/妹妹 (younger sibling), 아버지/아빠 = 爸爸, 어머니/엄마 = 妈妈. Never confuse 누나(姐姐) with 妹妹
 - Output only JSON: {"sentence":"Korean sentence here","translation":"Chinese translation here"}`,
   };
 
