@@ -714,12 +714,12 @@ function showResult(isRight) {
   $('practice-result-word').textContent    = w.korean;
   $('practice-result-meaning').textContent = w.rom ? `${w.meaning}  (${w.rom})` : w.meaning;
 
-  // Generate level-appropriate example sentence via AI
+  // 先显示词库自带例句，AI 在后台生成更好的版本
   const korEl     = $('practice-example-korean');
   const chineseEl = $('practice-example-chinese');
-  korEl.textContent     = '例句生成中...';
-  chineseEl.textContent = '';
-  chineseEl.style.display = 'none';
+  korEl.textContent     = w.example || '例句生成中...';
+  chineseEl.textContent = w.exTrans || w.exMeaning || '';
+  chineseEl.style.display = (w.exTrans || w.exMeaning) ? '' : 'none';
   generateLevelSentence(w, korEl, chineseEl);
   // Reset AI panel
   $('practice-ai-result').classList.add('hidden');
@@ -1221,25 +1221,39 @@ async function generateLevelSentence(w, korEl, chineseEl) {
   const localKey = (w.id || w.korean) + '_' + level;
   const fsKey    = 's_' + localKey;
 
-  // L1: localStorage
-  if (sentenceCache[localKey]) {
-    const c = sentenceCache[localKey];
-    korEl.textContent = c.sentence; chineseEl.textContent = c.translation; chineseEl.style.display = '';
-    w.example = c.sentence; w.exTrans = c.translation;
-    return;
+  // ── 辅助：渲染例句 ──────────────────────────────────────
+  function showSentence(sentence, translation) {
+    korEl.textContent = sentence || '';
+    if (translation) { chineseEl.textContent = translation; chineseEl.style.display = ''; }
+    else chineseEl.style.display = 'none';
+    if (sentence) { w.example = sentence; }
+    if (translation) { w.exTrans = translation; }
   }
 
-  // L2: Firestore shared cache
+  // ── L0: 词库自带例句，立刻显示（无需等待任何网络请求）──
+  if (w.example) {
+    showSentence(w.example, w.exTrans || w.exMeaning || '');
+  }
+
+  // ── L1: localStorage 缓存（已有更好的AI例句）──────────
+  if (sentenceCache[localKey]) {
+    const c = sentenceCache[localKey];
+    showSentence(c.sentence, c.translation);
+    return; // 有缓存，不需要继续
+  }
+
+  // ── L2: Firestore 共享缓存（后台静默查询）─────────────
   const remote = await fsGet(fsKey);
   if (remote?.sentence) {
     sentenceCache[localKey] = remote; lsSave(CACHE_KEY_SENTENCE, sentenceCache);
-    korEl.textContent = remote.sentence; chineseEl.textContent = remote.translation; chineseEl.style.display = '';
-    w.example = remote.sentence; w.exTrans = remote.translation;
+    showSentence(remote.sentence, remote.translation);
     return;
   }
 
-  // L3: Call AI, then write back to both caches
+  // ── L3: 调用 AI 生成（仅当没有任何缓存时）────────────
+  // 如果词库已有例句，AI生成是可选增强，不影响显示
   try {
+    korEl.textContent === '' && (korEl.textContent = '例句生成中...');
     const resp = await fetch('/api/ai-sentence', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1249,16 +1263,16 @@ async function generateLevelSentence(w, korEl, chineseEl) {
     if (data.error) throw new Error(data.error);
 
     const entry = { sentence: data.sentence || w.example || '', translation: data.translation || w.exMeaning || '' };
-    sentenceCache[localKey] = entry; lsSave(CACHE_KEY_SENTENCE, sentenceCache);
-    fsSet(fsKey, entry); // fire-and-forget
-
-    korEl.textContent = entry.sentence; chineseEl.textContent = entry.translation;
-    chineseEl.style.display = entry.sentence ? '' : 'none';
-    w.example = entry.sentence; w.exTrans = entry.translation;
+    if (entry.sentence) {
+      sentenceCache[localKey] = entry; lsSave(CACHE_KEY_SENTENCE, sentenceCache);
+      fsSet(fsKey, entry); // fire-and-forget
+      showSentence(entry.sentence, entry.translation);
+    }
   } catch {
-    korEl.textContent = w.example || '';
-    if (w.exMeaning || w.exTrans) { chineseEl.textContent = w.exTrans || w.exMeaning; chineseEl.style.display = ''; }
-    else chineseEl.style.display = 'none';
+    // AI 失败：确保显示词库自带例句（L0已经渲染过，这里只是保险）
+    if (!korEl.textContent || korEl.textContent === '例句生成中...') {
+      showSentence(w.example || '', w.exTrans || w.exMeaning || '');
+    }
   }
 }
 
