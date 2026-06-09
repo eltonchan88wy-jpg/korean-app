@@ -376,7 +376,7 @@ function initAuth() {
     setAuthLoading(true);
     firebase.auth().signInWithEmailAndPassword(email, pass)
       .then(uc => { State.user = uc.user; return loadUserProfile(uc.user.uid); })
-      .then(() => { setAuthLoading(false); showScreen('home'); })
+      .then(() => { setAuthLoading(false); LS.set('guestPracticeCount', 0); showScreen('home'); })
       .catch(e => { setAuthLoading(false); showAuthError(authErrMsg(e.code)); });
   };
 
@@ -408,6 +408,7 @@ function initAuth() {
         setAuthLoading(false);
         firebase.auth().signOut();
         State.user = null;
+        LS.set('guestPracticeCount', 0); // 注册后重置游客计数
         $('modal-register-success').classList.remove('hidden');
       })
       .catch(e => { setAuthLoading(false); showAuthError(authErrMsg(e.code)); });
@@ -555,7 +556,41 @@ function initPractice() {
   nextWord(false);
 }
 
+// ────────────────────────────────────────────────────────────
+//  GUEST LIMIT（游客最多试玩 10 个词）
+// ────────────────────────────────────────────────────────────
+const GUEST_LIMIT = 10;
+
+function getGuestCount() { return LS.get('guestPracticeCount', 0); }
+function incGuestCount() { LS.set('guestPracticeCount', getGuestCount() + 1); }
+
+function showGuestLimitModal() {
+  $('modal-guest-limit').classList.remove('hidden');
+}
+
+function initGuestLimitModal() {
+  $('guest-limit-register-btn').onclick = () => {
+    $('modal-guest-limit').classList.add('hidden');
+    showScreen('auth');
+    // 切到注册 tab
+    $('auth-tab-register')?.click();
+  };
+  $('guest-limit-cancel-btn').onclick = () => {
+    $('modal-guest-limit').classList.add('hidden');
+    showScreen('home');
+  };
+}
+
 function nextWord(fromReview) {
+  // 游客练习次数限制
+  if (State.user?.isGuest) {
+    const count = getGuestCount();
+    if (count >= GUEST_LIMIT) {
+      showGuestLimitModal();
+      return;
+    }
+  }
+
   State.resultShown = false;
   State.hintShown   = false;
   State.isReviewMode = !!fromReview;
@@ -603,6 +638,7 @@ function nextWord(fromReview) {
 
 function dontKnow() {
   if (!State.currentWord || State.resultShown) return;
+  if (State.user?.isGuest) incGuestCount();
   State.resultShown = true;
   $('practice-input').value = '';
   $('practice-input').disabled = true;
@@ -623,6 +659,7 @@ function dontKnow() {
 
 function submitAnswer() {
   if (!State.currentWord || State.resultShown) return;
+  if (State.user?.isGuest) incGuestCount();
   const answer  = $('practice-input').value.trim();
   const isRight = answer === State.currentWord.korean;
 
@@ -1096,6 +1133,9 @@ function bindEvents() {
   $('modal-close-btn').addEventListener('click', () => {
     $('modal-levelup').classList.add('hidden'); initProfile();
   });
+
+  // Modal: guest limit
+  initGuestLimitModal();
 
   // Modal: register success
   $('modal-register-ok-btn').addEventListener('click', () => {
