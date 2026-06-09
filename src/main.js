@@ -417,6 +417,25 @@ function initAuth() {
 
   [$('login-email'), $('login-pass')].forEach(el =>
     el.addEventListener('keydown', e => { if (e.key === 'Enter') $('auth-login-btn').click(); }));
+
+  $('forgot-pass-btn').onclick = () => {
+    const email = $('login-email').value.trim();
+    if (!email) { showAuthError('请先输入你的邮箱，再点忘记密码'); return; }
+    firebase.auth().sendPasswordResetEmail(email)
+      .then(() => {
+        clearAuthError();
+        const btn = $('forgot-pass-btn');
+        btn.textContent = '✅ 重置邮件已发送，请查收';
+        btn.style.color = 'var(--success, #10b981)';
+        btn.disabled = true;
+      })
+      .catch(e => {
+        const msg = e.code === 'auth/user-not-found' ? '该邮箱未注册'
+                  : e.code === 'auth/invalid-email'  ? '邮箱格式不正确'
+                  : '发送失败，请稍后再试';
+        showAuthError(msg);
+      });
+  };
 }
 
 const showAuthError = msg => { const el = $('auth-error'); el.textContent = msg; el.classList.remove('hidden'); };
