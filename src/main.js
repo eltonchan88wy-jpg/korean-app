@@ -58,6 +58,7 @@ const State = {
   isReviewMode: false,
   reviewQueue: [],
   sentencePromise: null,
+  analyzePromise: null,
   speechRate: 1.0,
   speechVolume: 1.0,
   firebaseApp: null,
@@ -702,6 +703,10 @@ function showResult(isRight) {
   const aiBtn = $('practice-ai-analyze');
   aiBtn.disabled = false;
   aiBtn.textContent = '✨ AI 分析';
+
+  // 答题结果出现时，后台静默预生成 AI 解析
+  // 用户点按钮时直接取结果，无需等待
+  State.analyzePromise = prefetchAnalyze(w);
 }
 
 function updateSessionStats() {
@@ -1274,6 +1279,52 @@ const POS_MAP = {
   pron: '代词', num: '数词', intj: '感叹词', aux: '助动词',
 };
 
+// 预生成 AI 解析（答题结果出现时后台静默启动，存入 State.analyzePromise）
+function prefetchAnalyze(w) {
+  const analyzeCacheKey = w.korean + '_' + (w.id || '');
+  const analyzefsKey    = 'a_' + w.korean + '_' + (w.id || '');
+  const posLabel        = POS_MAP[w.pos] || w.pos || '';
+
+  // L1: 内存
+  if (analyzeCache[analyzeCacheKey]) return Promise.resolve(analyzeCache[analyzeCacheKey]);
+
+  // L2: localStorage
+  const lsAll = lsLoad(CACHE_KEY_ANALYZE);
+  if (lsAll[analyzeCacheKey]) {
+    analyzeCache[analyzeCacheKey] = lsAll[analyzeCacheKey];
+    return Promise.resolve(lsAll[analyzeCacheKey]);
+  }
+
+  // L3: Firestore（非阻塞，和例句一样藏在答题时间里）
+  // → 命中：直接返回，用户点按钮时秒出
+  // → 未命中：调 Groq，同时写入 Firestore 供其他用户共享
+  return fsGet(analyzefsKey)
+    .then(remote => {
+      if (remote?.html) {
+        analyzeCache[analyzeCacheKey] = remote.html;
+        lsSave(CACHE_KEY_ANALYZE, { ...lsLoad(CACHE_KEY_ANALYZE), [analyzeCacheKey]: remote.html });
+        return remote.html;
+      }
+      // L4: Groq
+      const exampleTrans = w.exTrans || '';
+      return fetch('/api/ai-analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ word: w.korean, meaning: w.meaning, pos: posLabel, example: w.example, exampleTrans }),
+      })
+        .then(r => r.json())
+        .then(data => {
+          if (data.error) throw new Error(data.error);
+          const html = formatGroqResult(data.result);
+          analyzeCache[analyzeCacheKey] = html;
+          lsSave(CACHE_KEY_ANALYZE, { ...lsLoad(CACHE_KEY_ANALYZE), [analyzeCacheKey]: html });
+          fsSet(analyzefsKey, { html }); // fire-and-forget，写入 Firestore 供所有用户共享
+          return html;
+        });
+    })
+    .catch(() => null);
+}
+
 async function analyzeWord(w) {
   const btn = $('practice-ai-analyze');
   const box = $('practice-ai-result');
@@ -1281,13 +1332,13 @@ async function analyzeWord(w) {
   btn.textContent = '分析中...';
   box.classList.remove('hidden');
 
-  const posLabel = POS_MAP[w.pos] || w.pos || '';
-  const exampleTrans = w.exTrans || (!w.fromApi ? w.exMeaning : '') || $('practice-example-chinese').textContent || '';
-  const highlighted = w.example
+  // 构建 baseHtml（例句 + 单词信息）
+  const posLabel     = POS_MAP[w.pos] || w.pos || '';
+  const exampleTrans = w.exTrans || '';
+  const highlighted  = w.example
     ? w.example.replace(new RegExp(w.korean.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'),
         `<strong style="color:#7c3aed">${w.korean}</strong>`)
     : '';
-
   let baseHtml = '';
   if (highlighted) {
     baseHtml += `<div class="ai-section-title">📝 例句</div>`;
@@ -1299,37 +1350,15 @@ async function analyzeWord(w) {
   baseHtml += `<div>含义：${w.meaning}</div>`;
   if (w.rom) baseHtml += `<div>罗马音：${w.rom}</div>`;
 
-  // Check analyze cache — L1 localStorage, L2 Firestore
-  const analyzeCacheKey = w.korean + '_' + (w.example || '');
-  const analyzefsKey = 'a_' + w.korean + '_' + (w.id || '');
-
-  const showAnalysis = (html) => { box.innerHTML = baseHtml + html; btn.textContent = '✨ AI 分析'; btn.disabled = false; };
-
-  if (analyzeCache[analyzeCacheKey]) { showAnalysis(analyzeCache[analyzeCacheKey]); return; }
-
   box.innerHTML = baseHtml + `<div class="ai-section-title" style="margin-top:10px">💡 AI 分析中...</div>`;
 
-  const remoteAnalyze = await fsGet(analyzefsKey);
-  if (remoteAnalyze?.html) {
-    analyzeCache[analyzeCacheKey] = remoteAnalyze.html; lsSave(CACHE_KEY_ANALYZE, analyzeCache);
-    showAnalysis(remoteAnalyze.html); return;
-  }
+  // 直接 await 后台已经跑好的 Promise，通常已就绪
+  const analysisHtml = await (State.analyzePromise || prefetchAnalyze(w));
 
-  try {
-    const resp = await fetch('/api/ai-analyze', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ word: w.korean, meaning: w.meaning, pos: posLabel, example: w.example, exampleTrans }),
-    });
-    const data = await resp.json();
-    if (data.error) throw new Error(data.error);
-    const analysisHtml = formatGroqResult(data.result);
-    analyzeCache[analyzeCacheKey] = analysisHtml; lsSave(CACHE_KEY_ANALYZE, analyzeCache);
-    fsSet(analyzefsKey, { html: analysisHtml }); // fire-and-forget
-    showAnalysis(analysisHtml);
-  } catch (e) {
-    box.innerHTML = baseHtml + `<div class="ai-section-title" style="margin-top:10px">💡 语法分析</div><div style="color:#ef4444">分析失败：${e.message}</div>`;
-    btn.textContent = '✨ AI 分析'; btn.disabled = false;
+  if (analysisHtml) {
+    box.innerHTML = baseHtml + analysisHtml;
+  } else {
+    box.innerHTML = baseHtml + `<div class="ai-section-title" style="margin-top:10px">💡 语法分析</div><div style="color:#ef4444">分析失败，请重试</div>`;
   }
   btn.textContent = '✨ AI 分析';
   btn.disabled = false;
