@@ -669,6 +669,20 @@ body {
 .ai-analyze-btn:hover { background: #f5f3ff; }
 .ai-analyze-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
+.report-sentence-btn {
+  background: none;
+  border: 1.5px solid #fca5a5;
+  border-radius: var(--radius-xs);
+  padding: 4px 10px;
+  font-size: 0.78rem;
+  cursor: pointer;
+  color: #dc2626;
+  transition: all 0.2s;
+  margin-left: 6px;
+}
+.report-sentence-btn:hover { background: #fef2f2; }
+.report-sentence-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
 .ai-analysis-box {
   margin-top: 12px;
   background: #faf5ff;
