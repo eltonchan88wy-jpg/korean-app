@@ -1,6 +1,6 @@
 {
-  "name": "한국어 받아쓰기 · 韩语听写",
-  "short_name": "韩语听写",
+  "name": "댕글 · 한국어 받아쓰기",
+  "short_name": "댕글",
   "description": "韩语听写练习 · TOPIK 词库 · AI 例句 · 好友挑战",
   "start_url": "/",
   "display": "standalone",
