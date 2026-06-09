@@ -116,6 +116,18 @@
     <!-- Vocab count -->
     <div id="vocab-count" style="font-size:0.78rem;color:var(--text-muted);text-align:right;margin:-6px 0 10px;font-weight:500"></div>
 
+    <!-- Mastery progress bar -->
+    <div class="mastery-wrap" id="mastery-wrap">
+      <div class="mastery-header">
+        <span>🏅 词库掌握进度</span>
+        <span class="mastery-count" id="mastery-text">0 / 0 词已掌握</span>
+      </div>
+      <div class="mastery-bar-bg">
+        <div class="mastery-bar-fill" id="mastery-bar-fill" style="width:0%"></div>
+      </div>
+      <div class="mastery-sub" id="mastery-sub">连续答对同一个词 3 次即视为掌握，该词将从练习池移除</div>
+    </div>
+
     <!-- Start button -->
     <button class="home-start-btn" id="home-start-btn">
       <span style="font-size:1.3rem">▶</span> 开始练习
@@ -387,6 +399,19 @@
           <div class="profile-stat-name">最高连击</div>
         </div>
       </div>
+    </div>
+
+    <!-- Mastery progress in profile -->
+    <div class="card" style="margin-bottom:10px">
+      <div style="font-weight:700;font-size:0.95rem;margin-bottom:10px">📖 词库掌握情况</div>
+      <div class="mastery-header" style="margin-bottom:6px">
+        <span style="color:var(--text-muted);font-size:0.88rem">已完全掌握</span>
+        <span id="profile-mastery-text" style="font-weight:700;color:var(--success)">0 词</span>
+      </div>
+      <div class="mastery-bar-bg">
+        <div class="mastery-bar-fill" id="profile-mastery-bar" style="width:0%"></div>
+      </div>
+      <div style="font-size:0.75rem;color:var(--text-muted);margin-top:6px" id="profile-mastery-sub">占全部词库 0%</div>
     </div>
 
     <div class="card">

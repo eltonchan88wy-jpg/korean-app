@@ -81,6 +81,7 @@ function getProfile() {
     username: 'Guest', score: 0, totalAnswered: 0, totalCorrect: 0,
     bestStreak: 0, activeLevels: [1, 2], wrongBank: {},
     avatar: '🐱', bio: '', studyStreak: 0, lastStudyDate: '',
+    masteredWords: {}, wordStreak: {},
   });
 }
 
@@ -95,6 +96,8 @@ function saveProfile(p) {
       bestStreak: p.bestStreak, activeLevels: p.activeLevels,
       avatar: p.avatar || '🐱', bio: p.bio || '',
       studyStreak: p.studyStreak || 0, lastStudyDate: p.lastStudyDate || '',
+      masteredWords: p.masteredWords || {},
+      masteredCount: Object.keys(p.masteredWords || {}).length,
       lastActive: firebase.firestore.FieldValue.serverTimestamp(),
     }, { merge: true }).catch(e => console.warn('Firestore write:', e));
   }
@@ -163,8 +166,10 @@ async function speak(text, rate) {
 //  WORD POOL
 // ────────────────────────────────────────────────────────────
 function getWordPool() {
-  const levels = getProfile().activeLevels || [1, 2];
-  return State.allWords.filter(w => levels.includes(w.level));
+  const p = getProfile();
+  const levels = p.activeLevels || [1, 2];
+  const mastered = p.masteredWords || {};
+  return State.allWords.filter(w => levels.includes(w.level) && !mastered[w.id]);
 }
 
 function pickWord() {
@@ -192,6 +197,71 @@ function removeFromWrongBank(id) {
     if (!bank[id].count) delete bank[id];
   }
   saveWrongBank(bank);
+}
+
+// ── 掌握系统 ────────────────────────────────────────────────
+function checkWordMastery(id) {
+  const p = getProfile();
+  const streak = p.wordStreak || {};
+  streak[id] = (streak[id] || 0) + 1;
+  p.wordStreak = streak;
+
+  if (streak[id] >= 3) {
+    // 已掌握：加入 masteredWords，删除 wordStreak 记录
+    const mastered = p.masteredWords || {};
+    mastered[id] = true;
+    p.masteredWords = mastered;
+    delete streak[id];
+    // 同时从错题库移除
+    const bank = p.wrongBank || {};
+    delete bank[id];
+    p.wrongBank = bank;
+    saveProfile(p);
+    const word = State.currentWord;
+    showToast(`🎉 已完全掌握「${word?.korean || ''}」！`);
+    updateMasteryProgress();
+  } else {
+    saveProfile(p);
+    // 提示剩余次数（仅第1、2次答对时）
+    if (streak[id] === 1) showFloatingXP('1/3 ✓');
+    else if (streak[id] === 2) showFloatingXP('2/3 ✓✓');
+  }
+}
+
+function resetWordStreak(id) {
+  const p = getProfile();
+  const streak = p.wordStreak || {};
+  if (streak[id]) {
+    delete streak[id];
+    p.wordStreak = streak;
+    saveProfile(p);
+  }
+}
+
+function updateMasteryProgress() {
+  const mastered = Object.keys(getProfile().masteredWords || {}).length;
+  const total = State.allWords.length;
+  const pct = total > 0 ? (mastered / total * 100).toFixed(1) : 0;
+
+  // 首页进度条
+  const textEl = $('mastery-text');
+  const barEl  = $('mastery-bar-fill');
+  if (textEl) textEl.textContent = `${mastered} / ${total} 词已掌握`;
+  if (barEl)  barEl.style.width  = pct + '%';
+
+  // Profile 页进度条
+  const pTextEl = $('profile-mastery-text');
+  const pBarEl  = $('profile-mastery-bar');
+  const pSubEl  = $('profile-mastery-sub');
+  if (pTextEl) pTextEl.textContent = mastered + ' 词';
+  if (pBarEl)  pBarEl.style.width  = pct + '%';
+  if (pSubEl)  pSubEl.textContent  = `占全部词库 ${pct}%（共 ${total} 词）`;
+
+  // 若当前词库全部掌握，提醒换级
+  const pool = getWordPool();
+  if (pool.length === 0 && State.currentScreen === 'practice') {
+    showToast('🏆 当前词库全部掌握！请在主页选择更高等级继续挑战');
+  }
 }
 
 // ────────────────────────────────────────────────────────────
@@ -262,6 +332,8 @@ async function loadUserProfile(uid) {
         bio: d.bio || local.bio || '',
         studyStreak: d.studyStreak || local.studyStreak || 0,
         lastStudyDate: d.lastStudyDate || local.lastStudyDate || '',
+        masteredWords: d.masteredWords || local.masteredWords || {},
+        wordStreak: local.wordStreak || {},
       };
       LS.set('profile', State.profile);
     }
@@ -389,10 +461,14 @@ function initHome() {
   buildLevelCards();
   loadLeaderboard();
 
-  // 显示词库统计
+  // 显示词库统计（已排除已掌握的词）
   const pool = getWordPool();
   const apiCount = pool.filter(w => w.fromApi).length;
-  $('vocab-count').textContent = `词库: ${pool.length} 词${apiCount ? ` (含 ${apiCount} 个国立国语院词条)` : ' · 运行 fetch-krdict 脚本可扩充'}`;
+  const masteredCount = Object.keys(getProfile().masteredWords || {}).length;
+  const masteredNote = masteredCount > 0 ? ` · 已掌握 ${masteredCount} 词` : '';
+  $('vocab-count').textContent = `练习池: ${pool.length} 词${masteredNote}${apiCount ? ` (含 ${apiCount} 个国立国语院词条)` : ''}`;
+
+  updateMasteryProgress();
 }
 
 function updateHeaderUI() {
@@ -488,7 +564,16 @@ function nextWord(fromReview) {
     : (() => { State.isReviewMode = false; return pickWord(); })();
 
   const w = State.currentWord;
-  if (!w) { showToast('请先在主页选择词库等级！'); showScreen('home'); return; }
+  if (!w) {
+    const masteredCount = Object.keys(getProfile().masteredWords || {}).length;
+    if (masteredCount > 0) {
+      showToast('🏆 当前词库全部掌握！请在主页选择更高等级');
+    } else {
+      showToast('请先在主页选择词库等级！');
+    }
+    showScreen('home');
+    return;
+  }
 
   const inp = $('practice-input');
   inp.value = ''; inp.className = 'input input-korean'; inp.disabled = false;
@@ -529,6 +614,7 @@ function dontKnow() {
   State.sessionStreak = 0;
   saveProfile(p);
   addToWrongBank(State.currentWord.id);
+  resetWordStreak(State.currentWord.id);     // 不知道也重置该词连击
   recordStudyDay();
   updateSessionStats();
   showResult(false);
@@ -557,11 +643,13 @@ function submitAnswer() {
     addScore(xp);
     removeFromWrongBank(State.currentWord.id);
     showFloatingXP('+' + xp + ' XP');
+    checkWordMastery(State.currentWord.id);  // 检查是否已掌握（连续3次）
   } else {
     State.sessionWrong++;
     State.sessionStreak = 0;
     saveProfile(p);
     addToWrongBank(State.currentWord.id);
+    resetWordStreak(State.currentWord.id);   // 答错重置该词连击
   }
   recordStudyDay();
   updateSessionStats();
@@ -813,6 +901,8 @@ function initProfile() {
   const isLoggedIn = FIREBASE_ENABLED && State.user && !State.user.isGuest;
   $('profile-bio-edit-btn').classList.toggle('hidden', !isLoggedIn);
 
+  updateMasteryProgress();
+
   const changeUsernameBtn = $('profile-change-username-btn');
   if (changeUsernameBtn) {
     if (isLoggedIn) {
@@ -995,6 +1085,7 @@ function bindEvents() {
     if (FIREBASE_ENABLED && State.user && !State.user.isGuest) {
       firebase.firestore().collection('users').doc(State.user.uid)
         .set({ score:0, totalAnswered:0, totalCorrect:0, bestStreak:0,
+               masteredWords: {}, masteredCount: 0,
                lastActive: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
     }
     showToast('进度已重置！'); showScreen('home');
