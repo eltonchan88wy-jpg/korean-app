@@ -1,4 +1,4 @@
-export const config = { runtime: 'edge' };
+export const config = { runtime: 'nodejs' };
 
 const LEVEL_GUIDE = {
   1: 'very short sentence (max 5 words), only basic grammar: -아요/어요, -이에요/예요, 있어요/없어요, daily life topics',
@@ -42,17 +42,14 @@ function parseResult(raw) {
   } catch { return null; }
 }
 
-export default async function handler(req) {
-  if (req.method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
+export default async function handler(req, res) {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
 
   const API_KEY = process.env.DEEPSEEK_API_KEY;
-  if (!API_KEY) return new Response(JSON.stringify({ error: 'not configured' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+  if (!API_KEY) return res.status(500).json({ error: 'not configured' });
 
-  let body;
-  try { body = await req.json(); } catch { return new Response(JSON.stringify({ error: 'Invalid JSON' }), { status: 400 }); }
-
-  const { word, meaning, level = 1 } = body;
-  if (!word) return new Response(JSON.stringify({ error: 'Missing word' }), { status: 400 });
+  const { word, meaning, level = 1 } = req.body || {};
+  if (!word) return res.status(400).json({ error: 'Missing word' });
 
   const guide = LEVEL_GUIDE[level] || LEVEL_GUIDE[1];
 
@@ -82,11 +79,9 @@ Rules:
   };
 
   try {
-    // First attempt
     let raw = await callDeepSeek(API_KEY, [systemMsg, userMsg]);
     let parsed = parseResult(raw);
 
-    // Retry once if output is invalid
     if (!parsed) {
       raw = await callDeepSeek(API_KEY, [systemMsg, userMsg]);
       parsed = parseResult(raw);
@@ -94,12 +89,8 @@ Rules:
 
     if (!parsed) throw new Error('Invalid response after retry');
 
-    return new Response(JSON.stringify({ sentence: parsed.sentence, translation: parsed.translation }), {
-      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
-    });
+    return res.status(200).json({ sentence: parsed.sentence, translation: parsed.translation });
   } catch (e) {
-    return new Response(JSON.stringify({ error: e.message }), {
-      status: 500, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
-    });
+    return res.status(500).json({ error: e.message });
   }
 }
