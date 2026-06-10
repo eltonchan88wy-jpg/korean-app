@@ -986,7 +986,20 @@ function initSettings() {
     ? '✅ API Key 已配置，词库自动扩充中'
     : '⚠️ 未配置 — 在 .env 文件中填写 VITE_KRDICT_KEY';
   $('krdict-status').style.color = krKey ? 'var(--success)' : 'var(--warning)';
+
+  // sync theme button active state
+  const cur = LS.get('theme', 'dark');
+  $('theme-btn-dark').classList.toggle('active', cur === 'dark');
+  $('theme-btn-light').classList.toggle('active', cur === 'light');
 }
+
+function setTheme(theme) {
+  document.documentElement.dataset.theme = theme === 'light' ? 'light' : '';
+  LS.set('theme', theme);
+  $('theme-btn-dark').classList.toggle('active', theme === 'dark');
+  $('theme-btn-light').classList.toggle('active', theme === 'light');
+}
+window.setTheme = setTheme;
 
 // ────────────────────────────────────────────────────────────
 //  LEVEL UP MODAL
@@ -1452,6 +1465,8 @@ window.viewFriendProfile = function(uid) {
 document.addEventListener('DOMContentLoaded', () => {
   State.speechRate   = LS.get('speechRate',   1.0);
   State.speechVolume = LS.get('speechVolume', 1.0);
+  const savedTheme = LS.get('theme', 'dark');
+  if (savedTheme === 'light') document.documentElement.dataset.theme = 'light';
   bindEvents();
   initAuth();
   initFirebase();

@@ -1,29 +1,46 @@
 /* ===== RESET & BASE ===== */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+/* ── 默认主题（深棕色系） ── */
 :root {
-  --primary:       #8B5A2B;
-  --primary-light: #C8921F;
-  --primary-dark:  #4A2615;
-  --primary-bg:    #FFF4D2;
-  --success:       #10b981;
-  --success-bg:    #f0fdf4;
-  --danger:        #ef4444;
-  --danger-bg:     #fef2f2;
-  --warning:       #f59e0b;
-  --gold:          #F7DD81;
-  --bg:            #fffbf0;
-  --card:          #ffffff;
-  --text:          #1e293b;
-  --text-muted:    #64748b;
-  --border:        #e2e8f0;
-  --radius:        16px;
-  --radius-sm:     10px;
-  --radius-xs:     6px;
-  --shadow:        0 4px 24px rgba(0,0,0,0.08);
-  --shadow-sm:     0 2px 8px rgba(0,0,0,0.06);
-  --nav-h:         64px;
-  --header-h:      56px;
+  --primary:          #8B5A2B;
+  --primary-light:    #C8921F;
+  --primary-dark:     #4A2615;
+  --primary-bg:       #FFF4D2;
+  --primary-btn-text: #ffffff;
+  --success:          #10b981;
+  --success-bg:       #f0fdf4;
+  --danger:           #ef4444;
+  --danger-bg:        #fef2f2;
+  --warning:          #f59e0b;
+  --gold:             #F7DD81;
+  --bg:               #fffbf0;
+  --card:             #ffffff;
+  --text:             #1e293b;
+  --text-muted:       #64748b;
+  --border:           #e2e8f0;
+  --radius:           16px;
+  --radius-sm:        10px;
+  --radius-xs:        6px;
+  --shadow:           0 4px 24px rgba(0,0,0,0.08);
+  --shadow-sm:        0 2px 8px rgba(0,0,0,0.06);
+  --nav-h:            64px;
+  --header-h:         56px;
+}
+
+/* ── 浅色主题（阳光黄） ── */
+[data-theme="light"] {
+  --primary:          #F7DD81;
+  --primary-light:    #FBEFBA;
+  --primary-dark:     #E6C65E;
+  --primary-bg:       #FFF6D9;
+  --primary-btn-text: #4A2615;
+  --gold:             #F7DD81;
+  --bg:               #FFFCEF;
+  --card:             #ffffff;
+  --text:             #3a2010;
+  --text-muted:       #8a6a4a;
+  --border:           #F0DC8A;
 }
 
 html, body { height: 100%; }
@@ -197,7 +214,7 @@ body {
 .btn:active { transform: translateY(0); }
 .btn-primary {
   background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-  color: white;
+  color: var(--primary-btn-text);
 }
 .btn-primary:hover { opacity: 0.92; }
 .btn-success { background: var(--success); color: white; }
@@ -846,6 +863,16 @@ body {
    SCREEN: SETTINGS
    ============================================= */
 .setting-section { margin-bottom: 6px; }
+.theme-picker { display: flex; gap: 12px; }
+.theme-option {
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 8px;
+  padding: 12px 8px; border-radius: var(--radius-sm);
+  border: 2px solid var(--border); background: var(--card);
+  cursor: pointer; transition: all 0.2s; font-size: 0.85rem; color: var(--text);
+}
+.theme-option:hover { border-color: var(--primary); }
+.theme-option.active { border-color: var(--primary); background: var(--primary-bg); font-weight: 700; }
+.theme-swatch { width: 48px; height: 28px; border-radius: 8px; box-shadow: var(--shadow-sm); }
 .setting-section h3 { font-size: 0.95rem; font-weight: 700; margin-bottom: 14px; color: var(--text); }
 .setting-row {
   display: flex;
