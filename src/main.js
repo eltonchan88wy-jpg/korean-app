@@ -615,8 +615,6 @@ function nextWord(fromReview) {
   $('practice-pos').textContent     = POS_NAMES[w.pos] || w.pos;
   $('practice-meaning').textContent  = w.meaning;
 
-  // API 来源标注
-  $('practice-source').textContent = w.fromApi ? '📡 国立国语院' : '';
 
   setTimeout(() => speak(w.korean), 300);
   setTimeout(() => inp.focus(), 350);
