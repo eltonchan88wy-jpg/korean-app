@@ -320,7 +320,7 @@ body {
 .level-chip.gold { background: rgba(245,158,11,0.25); border-color: rgba(245,158,11,0.5); color: #fde68a; }
 
 .xp-bar-wrap { background: rgba(255,255,255,0.2); border-radius: 4px; height: 5px; overflow: hidden; margin: 4px 0 2px; }
-.xp-bar { height: 100%; background: linear-gradient(90deg, #a5f3fc, #67e8f9); border-radius: 4px; transition: width 0.7s cubic-bezier(0.34,1.56,0.64,1); }
+.xp-bar { height: 100%; background: linear-gradient(90deg, #4F8FEA, #7AADFF); border-radius: 4px; transition: width 0.7s cubic-bezier(0.34,1.56,0.64,1); }
 .xp-label { font-size: 0.68rem; color: rgba(255,255,255,0.7); text-align: right; }
 
 /* ===== TOPIK LEVEL BADGE ===== */
