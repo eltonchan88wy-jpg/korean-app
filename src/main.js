@@ -722,9 +722,6 @@ function showResult(isRight) {
   const aiBtn = $('practice-ai-analyze');
   aiBtn.disabled = false;
   aiBtn.textContent = '✨ AI 分析';
-  const reportBtn = $('practice-report-sentence');
-  reportBtn.disabled = false;
-  reportBtn.textContent = '⚠️ 例句有误';
 
   // 答题结果出现时，后台静默预生成 AI 解析
   // 用户点按钮时直接取结果，无需等待
@@ -1065,15 +1062,6 @@ function bindEvents() {
   $('practice-next-btn').addEventListener('click', () => nextWord(State.isReviewMode && State.reviewQueue.length > 0));
   $('practice-play-example').addEventListener('click', () => State.currentWord && speak(State.currentWord.example, State.speechRate * 0.9));
   $('practice-ai-analyze').addEventListener('click', () => { if (State.currentWord) analyzeWord(State.currentWord); });
-  $('practice-report-sentence').addEventListener('click', async () => {
-    if (!State.currentWord) return;
-    const btn = $('practice-report-sentence');
-    btn.disabled = true;
-    btn.textContent = '⏳ 处理中…';
-    await reportSentenceError(State.currentWord);
-    btn.textContent = '✅ 已重新生成';
-    setTimeout(() => { btn.textContent = '⚠️ 例句有误'; btn.disabled = false; }, 3000);
-  });
 
   // Emoji picker
   $('emoji-picker-cancel').addEventListener('click', () => $('modal-emoji-picker').classList.add('hidden'));
@@ -1285,34 +1273,6 @@ async function generateLevelSentence(w, korEl, chineseEl) {
   if (translation) w.exTrans = translation;
 }
 
-async function reportSentenceError(w) {
-  const level = w.level || 1;
-  const localKey = (w.id || w.korean) + '_' + level;
-  const fsKey = 's_' + localKey;
-
-  // 清除内存缓存
-  delete sentenceCache[localKey];
-
-  // 清除 localStorage 缓存
-  const lsAll = lsLoad(CACHE_KEY_SENTENCE);
-  delete lsAll[localKey];
-  lsSave(CACHE_KEY_SENTENCE, lsAll);
-
-  // 清除 Firestore 缓存
-  const db = fsDb();
-  if (db) {
-    try { await db.collection('aiCache').doc(fsKey).delete(); } catch {}
-  }
-
-  // 重新生成例句
-  const korEl     = $('practice-example-korean');
-  const chineseEl = $('practice-example-chinese');
-  korEl.textContent = '⏳ 重新生成中…';
-  chineseEl.textContent = '';
-
-  State.sentencePromise = prefetchSentence(w);
-  await generateLevelSentence(w, korEl, chineseEl);
-}
 
 async function autoTranslateExample(text, el) {
   try {
