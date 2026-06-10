@@ -4,15 +4,15 @@
 
 // ===== CONSTANTS =====
 var LEVELS_SYSTEM = [
-  { level:1, name:"냉면",       icon:"🍜", xp:0    },
-  { level:2, name:"돈까스",     icon:"🍱", xp:100  },
-  { level:3, name:"쌀국수",     icon:"🍲", xp:250  },
-  { level:4, name:"닭갈비",     icon:"🍗", xp:500  },
-  { level:5, name:"비빔밥",     icon:"🥗", xp:900  },
-  { level:6, name:"된장찌개",   icon:"🍵", xp:1500 },
-  { level:7, name:"김치전",     icon:"🥘", xp:2500 },
-  { level:8, name:"김치등갈비", icon:"🍖", xp:4000 },
-  { level:9, name:"갈비찜",     icon:"👑", xp:6000 },
+  { level:1, name:"냉면",       icon:"🍜", xp:0     },
+  { level:2, name:"돈까스",     icon:"🍱", xp:500   },
+  { level:3, name:"쌀국수",     icon:"🍲", xp:1000  },
+  { level:4, name:"닭갈비",     icon:"🍗", xp:1500  },
+  { level:5, name:"비빔밥",     icon:"🥗", xp:2500  },
+  { level:6, name:"된장찌개",   icon:"🍵", xp:4000  },
+  { level:7, name:"김치전",     icon:"🥘", xp:5500  },
+  { level:8, name:"김치등갈비", icon:"🍖", xp:7500  },
+  { level:9, name:"갈비찜",     icon:"👑", xp:10000 },
 ];
 
 var TOPIK_INFO = [
