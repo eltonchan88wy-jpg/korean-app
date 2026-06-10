@@ -553,8 +553,8 @@ body {
    SCREEN: PRACTICE
    ============================================= */
 .practice-meaning-box {
-  background: linear-gradient(135deg, var(--primary-bg), #f0fdf4);
-  border: 1.5px solid #c7d2fe;
+  background: linear-gradient(135deg, var(--primary-bg), var(--card));
+  border: 1.5px solid var(--primary);
   border-radius: var(--radius-sm);
   padding: 14px 16px;
   margin-bottom: 16px;
