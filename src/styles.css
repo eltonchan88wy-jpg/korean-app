@@ -1,5 +1,7 @@
 /* ===== RESET & BASE ===== */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { touch-action: manipulation; }
+body { touch-action: manipulation; }
 
 /* ── 默认主题（深棕色系） ── */
 :root {
