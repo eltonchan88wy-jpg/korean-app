@@ -769,20 +769,25 @@ function initFriends() {
 }
 
 function loadFriends() {
+  const db = firebase.firestore(), uid = State.user.uid;
   const list = $('friends-list');
   list.innerHTML = '<div style="color:var(--text-muted);font-size:0.85rem;text-align:center;padding:12px">加载中...</div>';
-  firebase.firestore().collection('users').doc(State.user.uid).collection('friends').get()
+  db.collection('users').doc(uid).collection('friends').get()
     .then(snap => {
       list.innerHTML = ''; State.friends = [];
       if (snap.empty) {
         list.innerHTML = '<div class="empty-state" style="padding:20px"><div class="empty-icon">👥</div><div>还没有好友，搜索添加吧！</div></div>';
         return;
       }
-      snap.forEach(doc => {
-        const d = doc.data();
-        State.friends.push({ uid: doc.id, username: d.username, score: d.score || 0, avatar: d.avatar || '👤' });
-        list.appendChild(friendItem(doc.id, d.username, d.score || 0, 'friend', d.avatar));
-      });
+      const friendIds = snap.docs.map(d => d.id);
+      return Promise.all(friendIds.map(id => db.collection('users').doc(id).get()))
+        .then(userDocs => {
+          userDocs.forEach(userDoc => {
+            const d = userDoc.data() || {};
+            State.friends.push({ uid: userDoc.id, username: d.username, score: d.score || 0, avatar: d.avatar || '👤' });
+            list.appendChild(friendItem(userDoc.id, d.username, d.score || 0, 'friend', d.avatar));
+          });
+        });
     }).catch(() => { list.innerHTML = '<div style="color:var(--danger);text-align:center">加载失败</div>'; });
 }
 
@@ -875,8 +880,8 @@ function searchUser() {
 window.acceptFriend = (fromUid, fromUsername) => {
   const db = firebase.firestore(), uid = State.user.uid, p = getProfile();
   const batch = db.batch();
-  batch.set(db.collection('users').doc(uid).collection('friends').doc(fromUid), { username:fromUsername, score:0, addedAt:firebase.firestore.FieldValue.serverTimestamp() });
-  batch.set(db.collection('users').doc(fromUid).collection('friends').doc(uid), { username:p.username, score:p.score||0, addedAt:firebase.firestore.FieldValue.serverTimestamp() });
+  batch.set(db.collection('users').doc(uid).collection('friends').doc(fromUid), { username:fromUsername, score:0, avatar:p.avatar||'🐱', addedAt:firebase.firestore.FieldValue.serverTimestamp() });
+  batch.set(db.collection('users').doc(fromUid).collection('friends').doc(uid), { username:p.username, score:p.score||0, avatar:p.avatar||'🐱', addedAt:firebase.firestore.FieldValue.serverTimestamp() });
   batch.delete(db.collection('users').doc(uid).collection('friendRequests').doc(fromUid));
   batch.commit().then(() => { showToast('已添加好友 ' + fromUsername + '！'); initFriends(); }).catch(() => showToast('操作失败'));
 };
