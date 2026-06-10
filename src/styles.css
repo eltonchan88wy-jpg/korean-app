@@ -353,7 +353,7 @@ body {
   padding: 24px 16px;
 }
 .auth-logo { text-align: center; color: white; margin-bottom: 32px; }
-.auth-logo-icon { font-size: 3.5rem; margin-bottom: 8px; }
+.auth-logo-icon { width: 80px; height: 80px; object-fit: contain; margin-bottom: 8px; display: block; margin-left: auto; margin-right: auto; }
 .auth-logo-title { font-size: 1.6rem; font-weight: 800; letter-spacing: -0.5px; }
 .auth-logo-sub { font-size: 0.9rem; opacity: 0.8; margin-top: 4px; }
 
