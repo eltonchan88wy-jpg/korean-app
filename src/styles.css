@@ -2,17 +2,17 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --primary:       #4f46e5;
-  --primary-light: #818cf8;
-  --primary-dark:  #3730a3;
-  --primary-bg:    #eef2ff;
+  --primary:       #8B5A2B;
+  --primary-light: #C8921F;
+  --primary-dark:  #4A2615;
+  --primary-bg:    #FFF4D2;
   --success:       #10b981;
   --success-bg:    #f0fdf4;
   --danger:        #ef4444;
   --danger-bg:     #fef2f2;
   --warning:       #f59e0b;
-  --gold:          #f59e0b;
-  --bg:            #f1f5f9;
+  --gold:          #F7DD81;
+  --bg:            #fffbf0;
   --card:          #ffffff;
   --text:          #1e293b;
   --text-muted:    #64748b;
@@ -97,7 +97,7 @@ body {
   padding-bottom: 12px;
   gap: 12px;
   flex-shrink: 0;
-  box-shadow: 0 2px 12px rgba(79,70,229,0.25);
+  box-shadow: 0 2px 12px rgba(139,90,43,0.25);
 }
 .back-btn {
   background: rgba(255,255,255,0.15);
@@ -253,7 +253,7 @@ body {
   background: white;
   color: var(--text);
 }
-.input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(79,70,229,0.1); }
+.input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(139,90,43,0.1); }
 .input-korean {
   font-size: 1.8rem;
   text-align: center;
@@ -452,7 +452,7 @@ body {
   gap: 8px;
   font-weight: 700;
   font-size: 0.95rem;
-  box-shadow: 0 4px 12px rgba(79,70,229,0.3);
+  box-shadow: 0 4px 12px rgba(139,90,43,0.3);
   transition: all 0.18s;
   border: none;
 }
@@ -489,11 +489,11 @@ body {
   align-items: center;
   justify-content: center;
   gap: 10px;
-  box-shadow: 0 6px 20px rgba(79,70,229,0.35);
+  box-shadow: 0 6px 20px rgba(139,90,43,0.35);
   transition: all 0.2s;
   margin-bottom: 16px;
 }
-.home-start-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(79,70,229,0.4); }
+.home-start-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(139,90,43,0.4); }
 
 /* Leaderboard preview on home */
 .leaderboard-item {
@@ -900,7 +900,7 @@ body {
   font-size: 1rem;
   pointer-events: none;
   animation: floatUp 1.3s ease forwards;
-  box-shadow: 0 4px 14px rgba(79,70,229,0.4);
+  box-shadow: 0 4px 14px rgba(139,90,43,0.4);
 }
 .toast {
   position: fixed;
