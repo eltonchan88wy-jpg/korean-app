@@ -12,6 +12,9 @@ body { touch-action: manipulation; }
   --primary-btn-text: #ffffff;
   --success:          #10b981;
   --success-bg:       #f0fdf4;
+  --level-done-bg:    #FEFBD0;
+  --level-done-color: #fde68a;
+  --profile-score-color: #fde68a;
   --danger:           #ef4444;
   --danger-bg:        #fef2f2;
   --warning:          #f59e0b;
@@ -38,6 +41,9 @@ body { touch-action: manipulation; }
   --primary-bg:       #FFF6D9;
   --primary-btn-text: #4A2615;
   --gold:             #F7DD81;
+  --level-done-bg:    #F0DFC0;
+  --level-done-color: #8B5A2B;
+  --profile-score-color: #8B5A2B;
   --bg:               #FFFCEF;
   --card:             #ffffff;
   --text:             #3a2010;
@@ -851,13 +857,13 @@ body {
   margin-bottom: 6px;
 }
 .level-progress-item.current { background: var(--primary-bg); border: 1.5px solid var(--primary-light); }
-.level-progress-item.done { background: var(--success-bg); }
+.level-progress-item.done { background: var(--level-done-bg); }
 .level-icon { font-size: 1.3rem; min-width: 28px; text-align: center; }
 .level-info { flex: 1; }
 .level-name-text { font-weight: 600; font-size: 0.88rem; }
 .level-xp-text { font-size: 0.73rem; color: var(--text-muted); }
 .level-status-tag { font-size: 0.78rem; font-weight: 700; }
-.level-status-tag.done { color: var(--success); }
+.level-status-tag.done { color: var(--level-done-color); }
 .level-status-tag.now { color: var(--primary); }
 .level-status-tag.locked { color: var(--text-muted); }
 
