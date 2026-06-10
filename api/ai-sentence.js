@@ -14,18 +14,18 @@ function hasKorean(s) { return /[가-힣ᄀ-ᇿ㄰-㆏]/.test(s); }
 // Check if string contains Chinese characters
 function hasChinese(s) { return /[一-鿿]/.test(s); }
 
-async function callGroq(apiKey, messages) {
-  const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+async function callDeepSeek(apiKey, messages) {
+  const resp = await fetch('https://api.deepseek.com/chat/completions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
     body: JSON.stringify({
-      model: 'llama-3.3-70b-versatile',
+      model: 'deepseek-v4-flash',
       messages,
       temperature: 0.3,
       max_tokens: 150,
     }),
   });
-  if (!resp.ok) throw new Error(`Groq ${resp.status}`);
+  if (!resp.ok) throw new Error(`DeepSeek ${resp.status}`);
   const data = await resp.json();
   return data.choices?.[0]?.message?.content?.trim() || '';
 }
@@ -45,7 +45,7 @@ function parseResult(raw) {
 export default async function handler(req) {
   if (req.method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
 
-  const API_KEY = process.env.GROQ_API_KEY;
+  const API_KEY = process.env.DEEPSEEK_API_KEY;
   if (!API_KEY) return new Response(JSON.stringify({ error: 'not configured' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
 
   let body;
@@ -83,12 +83,12 @@ Rules:
 
   try {
     // First attempt
-    let raw = await callGroq(API_KEY, [systemMsg, userMsg]);
+    let raw = await callDeepSeek(API_KEY, [systemMsg, userMsg]);
     let parsed = parseResult(raw);
 
     // Retry once if output is invalid
     if (!parsed) {
-      raw = await callGroq(API_KEY, [systemMsg, userMsg]);
+      raw = await callDeepSeek(API_KEY, [systemMsg, userMsg]);
       parsed = parseResult(raw);
     }
 
