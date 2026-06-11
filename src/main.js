@@ -523,7 +523,7 @@ function buildLevelCards() {
   const all = document.createElement('button');
   all.className = 'level-card-all';
   const totalCount = State.allWords.length;
-  all.innerHTML = `🌏 &nbsp;全部等级 (TOPIK 1-6) · ${totalCount} 词`;
+  all.innerHTML = `全部等级 (TOPIK 1-6) · ${totalCount} 词`;
   all.onclick = () => {
     const pp = getProfile(); pp.activeLevels = [1,2,3,4,5,6]; saveProfile(pp);
     buildLevelCards();
@@ -544,7 +544,7 @@ function loadLeaderboard() {
       let rank = 1;
       snap.forEach(doc => {
         const d = doc.data(), isMe = State.user && doc.id === State.user.uid;
-        const medal = rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':'#'+rank;
+        const medal = rank<=3 ? String(rank) : '#'+rank;
         const div = document.createElement('div');
         div.className = 'leaderboard-item';
         div.innerHTML = `<div class="rank-badge ${rank<=3?'r'+rank:''}">${medal}</div>
@@ -1492,17 +1492,14 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function setupNavKeyboardHandling() {
-  if (!window.visualViewport) return;
-  const nav = document.getElementById('global-nav');
-  if (!nav) return;
-  const adjust = () => {
-    if (nav.classList.contains('hidden')) return;
-    const vv = window.visualViewport;
-    const keyboardHeight = Math.max(0, window.innerHeight - vv.offsetTop - vv.height);
-    nav.style.bottom = keyboardHeight > 0 ? keyboardHeight + 'px' : '';
-  };
-  window.visualViewport.addEventListener('resize', adjust);
-  window.visualViewport.addEventListener('scroll', adjust);
+  // When keyboard closes (input loses focus), snap nav back to screen bottom.
+  // Needed on iOS where position:fixed elements drift upward after keyboard dismissal.
+  document.addEventListener('focusout', () => {
+    setTimeout(() => {
+      const nav = document.getElementById('global-nav');
+      if (nav && !nav.classList.contains('hidden')) nav.style.bottom = '';
+    }, 120);
+  });
 }
 
 // ────────────────────────────────────────────────────────────
