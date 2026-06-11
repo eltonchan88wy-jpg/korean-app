@@ -82,9 +82,8 @@ body {
 .screen {
   display: none;
   flex-direction: column;
-  height: 100vh;
-  height: 100dvh;
-  overflow: hidden;
+  min-height: 100vh;
+  min-height: 100dvh;
 }
 .screen.active { display: flex; }
 
