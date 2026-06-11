@@ -614,7 +614,6 @@ function nextWord(fromReview) {
 
   if (mode === 'mcq') {
     renderMCQ();
-    setTimeout(() => speak(w.korean), 300);
   } else if (mode === 'flashcard') {
     $('fc-word-korean').textContent = w.korean;
     $('fc-reveal-btn').classList.remove('hidden');
