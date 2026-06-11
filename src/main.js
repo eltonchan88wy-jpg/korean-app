@@ -713,7 +713,8 @@ function showResult(isRight) {
   $('practice-ai-result').innerHTML = '';
   const aiBtn = $('practice-ai-analyze');
   aiBtn.disabled = false;
-  aiBtn.textContent = '✨ AI 分析';
+  aiBtn.innerHTML = '<i data-lucide="search"></i> AI 分析';
+  window.lucide?.createIcons({ nodes: [aiBtn] });
 
   // 答题结果出现时，后台静默预生成 AI 解析
   // 用户点按钮时直接取结果，无需等待
@@ -1487,7 +1488,22 @@ document.addEventListener('DOMContentLoaded', () => {
   bindEvents();
   initAuth();
   initFirebase();
+  setupNavKeyboardHandling();
 });
+
+function setupNavKeyboardHandling() {
+  if (!window.visualViewport) return;
+  const nav = document.getElementById('global-nav');
+  if (!nav) return;
+  const adjust = () => {
+    if (nav.classList.contains('hidden')) return;
+    const vv = window.visualViewport;
+    const keyboardHeight = Math.max(0, window.innerHeight - vv.offsetTop - vv.height);
+    nav.style.bottom = keyboardHeight > 0 ? keyboardHeight + 'px' : '';
+  };
+  window.visualViewport.addEventListener('resize', adjust);
+  window.visualViewport.addEventListener('scroll', adjust);
+}
 
 // ────────────────────────────────────────────────────────────
 //  PWA — 注册 Service Worker

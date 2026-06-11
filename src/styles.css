@@ -921,7 +921,7 @@ body {
 @keyframes modalIn { from{opacity:0;transform:scale(0.7)} to{opacity:1;transform:scale(1)} }
 .modal-emoji { font-size: 3.5rem; margin-bottom: 10px; display: flex; justify-content: center; }
 .modal-emoji svg { width: 48px; height: 48px; stroke: var(--primary); stroke-width: 1.5; }
-.input-tip svg, .home-stat-name svg, .session-stat-name svg { width: 13px; height: 13px; vertical-align: -2px; stroke: currentColor; stroke-width: 2; }
+.input-tip svg, .home-stat-name svg, .session-stat-name svg, .example-label svg { width: 13px; height: 13px; vertical-align: -2px; stroke: currentColor; stroke-width: 2; }
 .hint-toggle svg { width: 14px; height: 14px; stroke: currentColor; stroke-width: 2; }
 .modal-title { font-size: 1.5rem; font-weight: 800; color: var(--primary); margin-bottom: 6px; }
 .modal-sub { color: var(--text-muted); font-size: 0.95rem; margin-bottom: 22px; line-height: 1.5; }
