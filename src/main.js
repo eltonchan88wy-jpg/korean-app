@@ -278,12 +278,18 @@ function addScore(xp) {
 // expose globally so inline onclick=""  still works
 window.showScreen = function(name) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.querySelectorAll('.nav-item').forEach(btn =>
-    btn.classList.toggle('active', btn.dataset.screen === name));
 
   const el = document.getElementById('screen-' + name);
   if (el) el.classList.add('active');
   State.currentScreen = name;
+
+  const NAV_SCREENS = ['home', 'practice', 'review', 'friends', 'profile'];
+  const globalNav = document.getElementById('global-nav');
+  if (globalNav) {
+    globalNav.classList.toggle('hidden', !NAV_SCREENS.includes(name));
+    globalNav.querySelectorAll('.nav-item').forEach(btn =>
+      btn.classList.toggle('active', btn.dataset.screen === name));
+  }
 
   const init = { home: initHome, practice: initPractice, review: initReview,
                  friends: initFriends, profile: initProfile, settings: initSettings };
