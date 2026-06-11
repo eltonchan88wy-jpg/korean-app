@@ -814,7 +814,7 @@ function loadFriendLeaderboard() {
       const entries = docs.filter(d => d.data()).sort((a,b) => (b.data().score||0) - (a.data().score||0));
       entries.forEach((doc, i) => {
         const d = doc.data(), isMe = doc.id === State.user.uid;
-        const rank = i + 1, medal = rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':'#'+rank;
+        const rank = i + 1, medal = rank<=3 ? String(rank) : '#'+rank;
         const div = document.createElement('div');
         div.className = 'leaderboard-item';
         div.innerHTML = `<div class="rank-badge ${rank<=3?'r'+rank:''}">${medal}</div>
