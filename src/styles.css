@@ -354,6 +354,7 @@ body {
 #screen-auth {
   background: linear-gradient(160deg, var(--primary-dark) 0%, var(--primary) 50%, var(--primary-light) 100%);
   min-height: 100vh;
+  min-height: 100dvh;
   justify-content: center;
   align-items: center;
   padding: 24px 16px;
