@@ -702,6 +702,7 @@ function submitMCQ(selected, btn) {
   recordStudyDay();
   updateSessionStats();
   showResult(isRight);
+  speak(State.currentWord.korean);
 }
 
 function flipFlashcard() {
