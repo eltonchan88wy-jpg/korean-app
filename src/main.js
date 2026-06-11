@@ -3,20 +3,11 @@
  * 所有依赖通过 import 加载，无全局变量污染
  */
 
-import { VOCABULARY, POS_NAMES }      from './vocabulary.js';
+import { POS_NAMES } from './vocabulary.js';
 import { FIREBASE_CONFIG, FIREBASE_ENABLED } from './firebase-config.js';
 import romanize from 'romanize-korean';
 import apiWordsRaw from './data/api-words.json';
 const API_WORDS = Array.isArray(apiWordsRaw) ? apiWordsRaw : [];
-
-// ────────────────────────────────────────────────────────────
-//  MERGE LOCAL + API VOCAB (去重)
-// ────────────────────────────────────────────────────────────
-function mergeVocab(local, api) {
-  const seen = new Set(local.map(w => w.korean));
-  const filtered = api.filter(w => !seen.has(w.korean));
-  return [...local, ...filtered];
-}
 
 // ────────────────────────────────────────────────────────────
 //  CONSTANTS
@@ -48,7 +39,7 @@ const TOPIK_INFO = [
 const State = {
   user: null,
   profile: null,
-  allWords: mergeVocab(VOCABULARY, API_WORDS),  // 本地词库 + API 预取词库
+  allWords: API_WORDS,
   currentWord: null,
   sessionCorrect: 0,
   sessionWrong: 0,
@@ -483,13 +474,6 @@ function initHome() {
   buildLevelCards();
   loadLeaderboard();
 
-  // 显示词库统计（已排除已掌握的词）
-  const pool = getWordPool();
-  const apiCount = pool.filter(w => w.fromApi).length;
-  const masteredCount = Object.keys(getProfile().masteredWords || {}).length;
-  const masteredNote = masteredCount > 0 ? ` · 已掌握 ${masteredCount} 词` : '';
-  $('vocab-count').textContent = `练习池: ${pool.length} 词${masteredNote}${apiCount ? ` (含 ${apiCount} 个国立国语院词条)` : ''}`;
-
   updateMasteryProgress();
 }
 
@@ -603,7 +587,8 @@ function nextWord(fromReview) {
   $('practice-dontknow').disabled = false;
   $('practice-result').classList.add('hidden');
   $('practice-hint-rom').classList.add('hidden');
-  $('practice-hint-btn').textContent = '💡 显示发音提示';
+  $('practice-hint-btn').innerHTML = '<i data-lucide="lightbulb"></i> 显示发音提示';
+  window.lucide?.createIcons({ nodes: [$('practice-hint-btn')] });
 
   // 词级徽章
   const lvClass = 't' + w.level;
@@ -695,7 +680,10 @@ function showResult(isRight) {
   const w = State.currentWord;
   $('practice-result').classList.remove('hidden');
   const st = $('practice-result-status');
-  st.textContent = isRight ? '✅ 答对了！+XP' : '❌ 答错了';
+  st.innerHTML = isRight
+    ? '<i data-lucide="check-circle"></i> 答对了！+XP'
+    : '<i data-lucide="x-circle"></i> 答错了';
+  window.lucide?.createIcons({ nodes: [st] });
   st.className   = 'result-status ' + (isRight ? 'correct' : 'wrong');
   $('practice-result-word').textContent    = w.korean;
   $('practice-result-meaning').textContent = w.rom ? `${w.meaning}  (${w.rom})` : w.meaning;
@@ -1060,7 +1048,9 @@ function bindEvents() {
     State.hintShown = !State.hintShown;
     const el = $('practice-hint-rom');
     el.classList.toggle('hidden', !State.hintShown);
-    $('practice-hint-btn').textContent = State.hintShown ? '💡 隐藏发音提示' : '💡 显示发音提示';
+    const hintLabel = State.hintShown ? '隐藏发音提示' : '显示发音提示';
+    $('practice-hint-btn').innerHTML = `<i data-lucide="lightbulb"></i> ${hintLabel}`;
+    window.lucide?.createIcons({ nodes: [$('practice-hint-btn')] });
     if (!State.hintShown) return;
     const w = State.currentWord;
     if (!w) return;
