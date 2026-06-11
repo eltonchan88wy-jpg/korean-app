@@ -82,9 +82,9 @@ body {
 .screen {
   display: none;
   flex-direction: column;
-  min-height: 100vh;
-  /* iOS PWA: 避免内容被刘海/状态栏遮挡 */
-  min-height: 100dvh;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
 }
 .screen.active { display: flex; }
 
@@ -353,11 +353,10 @@ body {
    ============================================= */
 #screen-auth {
   background: linear-gradient(160deg, var(--primary-dark) 0%, var(--primary) 50%, var(--primary-light) 100%);
-  min-height: 100vh;
-  min-height: 100dvh;
   justify-content: center;
   align-items: center;
   padding: 24px 16px;
+  overflow-y: auto;
 }
 .auth-logo { text-align: center; color: white; margin-bottom: 20px; }
 .auth-logo-icon { width: 200px; height: 200px; object-fit: contain; margin-bottom: -60px; display: block; margin-left: auto; margin-right: auto; }
@@ -404,7 +403,6 @@ body {
    ============================================= */
 #screen-home {
   background: var(--bg);
-  min-height: 100vh;
 }
 .home-header {
   background: linear-gradient(135deg, var(--primary-dark), var(--primary));
