@@ -1078,3 +1078,142 @@ body {
   color: var(--text-muted);
   line-height: 1.4;
 }
+
+/* =============================================
+   PRACTICE MODE SELECTOR
+   ============================================= */
+.mode-selector {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.mode-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 12px 6px;
+  border-radius: var(--radius-sm);
+  border: 2px solid var(--border);
+  background: var(--card);
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s;
+}
+.mode-btn svg { width: 20px; height: 20px; }
+.mode-btn:hover { border-color: var(--primary); color: var(--primary); }
+.mode-btn.active {
+  border-color: var(--primary);
+  background: var(--primary-bg);
+  color: var(--primary-dark);
+}
+
+/* =============================================
+   MCQ OPTIONS
+   ============================================= */
+.mcq-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.mcq-btn {
+  padding: 16px 12px;
+  border-radius: var(--radius-sm);
+  border: 2px solid var(--border);
+  background: var(--card);
+  color: var(--text);
+  font-size: 1.1rem;
+  font-weight: 700;
+  font-family: 'Noto Sans KR', sans-serif;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: center;
+  line-height: 1.3;
+}
+.mcq-btn:hover:not(:disabled) {
+  border-color: var(--primary);
+  background: var(--primary-bg);
+  transform: translateY(-1px);
+}
+.mcq-btn.correct {
+  border-color: var(--success);
+  background: var(--success-bg);
+  color: var(--success);
+}
+.mcq-btn.wrong {
+  border-color: var(--danger);
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+.mcq-btn:disabled { cursor: default; }
+
+/* =============================================
+   FLASHCARD
+   ============================================= */
+.fc-word-card {
+  background: linear-gradient(135deg, var(--primary-dark), var(--primary));
+  border-radius: var(--radius);
+  padding: 32px 20px 24px;
+  text-align: center;
+  margin-bottom: 16px;
+}
+.fc-word-korean {
+  font-size: 2.4rem;
+  font-weight: 900;
+  color: #fff;
+  font-family: 'Noto Sans KR', sans-serif;
+  letter-spacing: 2px;
+  margin-bottom: 18px;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+.fc-reveal-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: rgba(255,255,255,0.2);
+  color: #fff;
+  border: 2px solid rgba(255,255,255,0.5);
+  border-radius: 50px;
+  padding: 10px 22px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.18s;
+}
+.fc-reveal-btn:hover { background: rgba(255,255,255,0.35); }
+.fc-reveal-btn svg { width: 16px; height: 16px; }
+
+.fc-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+}
+.fc-action-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px;
+  border-radius: var(--radius-sm);
+  border: none;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.18s;
+}
+.fc-action-btn svg { width: 18px; height: 18px; }
+.fc-know {
+  background: var(--success);
+  color: #fff;
+}
+.fc-know:hover { opacity: 0.88; transform: translateY(-1px); }
+.fc-forget {
+  background: var(--danger);
+  color: #fff;
+}
+.fc-forget:hover { opacity: 0.88; transform: translateY(-1px); }

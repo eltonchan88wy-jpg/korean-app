@@ -55,6 +55,8 @@ const State = {
   firebaseApp: null,
   friends: [],
   pendingRequests: [],
+  practiceMode: 'dictation', // 'dictation' | 'mcq' | 'flashcard'
+  fcFlipped: false,
 };
 
 // ────────────────────────────────────────────────────────────
@@ -587,6 +589,7 @@ function nextWord(fromReview) {
     return;
   }
 
+  State.fcFlipped = false;
   const inp = $('practice-input');
   inp.value = ''; inp.className = 'input input-korean'; inp.disabled = false;
   $('practice-submit').disabled = false;
@@ -602,17 +605,151 @@ function nextWord(fromReview) {
   badge.className = 'topik-badge ' + lvClass;
   badge.textContent = 'TOPIK ' + w.level;
 
-  // 含义 + 词性（新功能：练习时显示）
-  $('practice-pos').textContent     = POS_NAMES[w.pos] || w.pos;
-  $('practice-meaning').textContent  = w.meaning;
+  // 含义 + 词性
+  $('practice-pos').textContent    = POS_NAMES[w.pos] || w.pos;
+  $('practice-meaning').textContent = w.meaning;
 
+  const mode = State.practiceMode;
+  setPracticeUIMode(mode);
 
-  setTimeout(() => speak(w.korean), 300);
-  setTimeout(() => inp.focus(), 350);
+  if (mode === 'mcq') {
+    renderMCQ();
+    setTimeout(() => speak(w.korean), 300);
+  } else if (mode === 'flashcard') {
+    $('fc-word-korean').textContent = w.korean;
+    $('fc-reveal-btn').classList.remove('hidden');
+    setTimeout(() => speak(w.korean), 300);
+  } else {
+    setTimeout(() => speak(w.korean), 300);
+    setTimeout(() => inp.focus(), 350);
+  }
 
-  // 词出现时立即在后台预生成例句，存入 State.sentencePromise
-  // 等用户答完题调 showResult 时，例句通常已经就绪
   State.sentencePromise = prefetchSentence(w);
+}
+
+// ────────────────────────────────────────────────────────────
+//  PRACTICE MODE HELPERS
+// ────────────────────────────────────────────────────────────
+function setPracticeUIMode(mode) {
+  const isDictation = mode === 'dictation';
+  const isMCQ       = mode === 'mcq';
+  const isFlashcard = mode === 'flashcard';
+  const isFlipped   = State.fcFlipped;
+
+  $('practice-hint-btn').parentElement.classList.toggle('hidden', !isDictation);
+  $('practice-input').parentElement.classList.toggle('hidden', !isDictation);
+  $('practice-submit').classList.toggle('hidden', !isDictation);
+  $('practice-dontknow').classList.toggle('hidden', !isDictation);
+
+  document.querySelector('.practice-meaning-box').classList.toggle('hidden', isFlashcard && !isFlipped);
+
+  $('mcq-grid').classList.toggle('hidden', !isMCQ);
+  $('fc-word-card').classList.toggle('hidden', !isFlashcard || isFlipped);
+  $('fc-actions').classList.toggle('hidden', !isFlashcard || !isFlipped);
+}
+
+function renderMCQ() {
+  const w    = State.currentWord;
+  const pool = getWordPool().filter(x => x.korean !== w.korean);
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+  const options = pool.slice(0, 3).map(x => x.korean);
+  options.splice(Math.floor(Math.random() * 4), 0, w.korean);
+
+  const grid = $('mcq-grid');
+  grid.innerHTML = '';
+  options.forEach(korean => {
+    const btn = document.createElement('button');
+    btn.className = 'mcq-btn';
+    btn.textContent = korean;
+    btn.addEventListener('click', () => submitMCQ(korean, btn));
+    grid.appendChild(btn);
+  });
+}
+
+function submitMCQ(selected, btn) {
+  if (State.resultShown) return;
+  const correct = State.currentWord.korean;
+  const isRight = selected === correct;
+  State.resultShown = true;
+
+  document.querySelectorAll('.mcq-btn').forEach(b => {
+    b.disabled = true;
+    if (b.textContent === correct) b.classList.add('correct');
+    else if (b === btn && !isRight) b.classList.add('wrong');
+  });
+
+  const p = getProfile();
+  p.totalAnswered = (p.totalAnswered || 0) + 1;
+  if (isRight) {
+    State.sessionCorrect++;
+    State.sessionStreak++;
+    p.totalCorrect = (p.totalCorrect || 0) + 1;
+    if (State.sessionStreak > (p.bestStreak || 0)) p.bestStreak = State.sessionStreak;
+    const xp = 5 + Math.floor(State.sessionStreak / 3) * 3;
+    saveProfile(p); addScore(xp);
+    removeFromWrongBank(State.currentWord.id);
+    showFloatingXP('+' + xp + ' XP');
+    checkWordMastery(State.currentWord.id);
+  } else {
+    State.sessionWrong++;
+    State.sessionStreak = 0;
+    saveProfile(p);
+    addToWrongBank(State.currentWord.id);
+    resetWordStreak(State.currentWord.id);
+  }
+  recordStudyDay();
+  updateSessionStats();
+  showResult(isRight);
+}
+
+function flipFlashcard() {
+  State.fcFlipped = true;
+  setPracticeUIMode('flashcard');
+
+  const w = State.currentWord;
+  $('practice-result').classList.remove('hidden');
+  const st = $('practice-result-status');
+  st.textContent = ''; st.className = 'result-status';
+  $('practice-result-word').textContent    = w.korean;
+  $('practice-result-meaning').textContent = w.rom ? `${w.meaning}  (${w.rom})` : w.meaning;
+  $('practice-next-btn').classList.add('hidden');
+  $('practice-ai-result').classList.add('hidden');
+
+  const korEl = $('practice-example-korean');
+  const chiEl = $('practice-example-chinese');
+  korEl.textContent = '例句生成中...'; chiEl.textContent = ''; chiEl.style.display = 'none';
+  generateLevelSentence(w, korEl, chiEl);
+}
+
+function submitFlashcard(knew) {
+  if (State.resultShown) return;
+  State.resultShown = true;
+  $('fc-actions').classList.add('hidden');
+
+  const p = getProfile();
+  p.totalAnswered = (p.totalAnswered || 0) + 1;
+  if (knew) {
+    State.sessionCorrect++;
+    State.sessionStreak++;
+    p.totalCorrect = (p.totalCorrect || 0) + 1;
+    if (State.sessionStreak > (p.bestStreak || 0)) p.bestStreak = State.sessionStreak;
+    saveProfile(p); addScore(5);
+    removeFromWrongBank(State.currentWord.id);
+    showFloatingXP('+5 XP');
+    checkWordMastery(State.currentWord.id);
+  } else {
+    State.sessionWrong++;
+    State.sessionStreak = 0;
+    saveProfile(p);
+    addToWrongBank(State.currentWord.id);
+    resetWordStreak(State.currentWord.id);
+  }
+  recordStudyDay();
+  updateSessionStats();
+  setTimeout(() => nextWord(State.isReviewMode && State.reviewQueue.length > 0), 400);
 }
 
 function dontKnow() {
@@ -708,6 +845,7 @@ function showResult(isRight) {
   chineseEl.textContent = '';
   chineseEl.style.display = 'none';
   generateLevelSentence(w, korEl, chineseEl);
+  $('practice-next-btn').classList.remove('hidden');
   // Reset AI panel
   $('practice-ai-result').classList.add('hidden');
   $('practice-ai-result').innerHTML = '';
@@ -1044,6 +1182,15 @@ function bindEvents() {
   document.querySelectorAll('.nav-item').forEach(btn =>
     btn.addEventListener('click', () => showScreen(btn.dataset.screen)));
 
+  // Mode selector
+  document.querySelectorAll('.mode-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      State.practiceMode = btn.dataset.mode;
+    });
+  });
+
   // Home
   $('home-start-btn').addEventListener('click', () => showScreen('practice'));
   $('home-avatar').addEventListener('click', () => showScreen('profile'));
@@ -1074,6 +1221,11 @@ function bindEvents() {
   $('practice-dontknow').addEventListener('click', dontKnow);
   $('practice-next-btn').addEventListener('click', () => nextWord(State.isReviewMode && State.reviewQueue.length > 0));
   $('practice-play-example').addEventListener('click', () => State.currentWord && speak(State.currentWord.example, State.speechRate * 0.9));
+
+  // Flashcard
+  $('fc-reveal-btn').addEventListener('click', flipFlashcard);
+  $('fc-know-btn').addEventListener('click', () => submitFlashcard(true));
+  $('fc-forget-btn').addEventListener('click', () => submitFlashcard(false));
   $('practice-ai-analyze').addEventListener('click', () => { if (State.currentWord) analyzeWord(State.currentWord); });
 
   // Emoji picker

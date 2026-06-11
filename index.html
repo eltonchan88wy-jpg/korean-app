@@ -142,6 +142,20 @@
       <div class="mastery-sub" id="mastery-sub">连续答对同一个词 3 次即视为掌握，该词将从练习池移除</div>
     </div>
 
+    <!-- Practice mode selector -->
+    <div class="section-title" style="margin-top:16px">练习模式</div>
+    <div class="mode-selector" id="mode-selector">
+      <button class="mode-btn active" data-mode="dictation">
+        <i data-lucide="headphones"></i><span>听写</span>
+      </button>
+      <button class="mode-btn" data-mode="mcq">
+        <i data-lucide="list-checks"></i><span>选择题</span>
+      </button>
+      <button class="mode-btn" data-mode="flashcard">
+        <i data-lucide="layers"></i><span>闪卡</span>
+      </button>
+    </div>
+
     <!-- Start button -->
     <button class="home-start-btn" id="home-start-btn">
       <span style="font-size:1.3rem">▶</span> 开始练习
@@ -205,11 +219,22 @@
 
       <!-- API source tag -->
 
+      <!-- FLASHCARD: big Korean word (shown before flip) -->
+      <div class="fc-word-card hidden" id="fc-word-card">
+        <div class="fc-word-korean" id="fc-word-korean"></div>
+        <button class="fc-reveal-btn" id="fc-reveal-btn">
+          <i data-lucide="eye"></i> 翻转看释义
+        </button>
+      </div>
+
       <!-- Audio controls -->
       <div class="audio-row">
         <button class="play-main" id="practice-play-btn">▶ &nbsp;播放单词</button>
         <button class="play-slow" id="practice-slow-btn">慢速</button>
       </div>
+
+      <!-- MCQ: 4 option buttons -->
+      <div class="mcq-grid hidden" id="mcq-grid"></div>
 
       <!-- Hint row -->
       <div class="hint-row">
@@ -246,6 +271,16 @@
           <div class="ai-analysis-box hidden" id="practice-ai-result"></div>
         </div>
         <button class="btn btn-success mt-3" id="practice-next-btn">下一题 →</button>
+      </div>
+
+      <!-- FLASHCARD: know / don't know actions (shown after flip) -->
+      <div class="fc-actions hidden" id="fc-actions">
+        <button class="fc-action-btn fc-know" id="fc-know-btn">
+          <i data-lucide="check"></i> 认识
+        </button>
+        <button class="fc-action-btn fc-forget" id="fc-forget-btn">
+          <i data-lucide="x"></i> 不会
+        </button>
       </div>
     </div>
 
