@@ -383,27 +383,39 @@ function initAuth() {
 
   $('auth-register-btn').onclick = () => {
     if (!FIREBASE_ENABLED) { showAuthError('Firebase 尚未配置，请先填写 .env 文件'); return; }
-    const uname = $('reg-username').value.trim();
-    const email = $('reg-email').value.trim();
-    const pass  = $('reg-pass').value;
-    const pass2 = $('reg-pass2').value;
-    if (!uname || !email || !pass) { showAuthError('请填写所有字段'); return; }
+    const uname      = $('reg-username').value.trim();
+    const email      = $('reg-email').value.trim();
+    const pass       = $('reg-pass').value;
+    const pass2      = $('reg-pass2').value;
+    const inviteCode = $('reg-invite-code').value.trim().toUpperCase();
+    if (!uname || !email || !pass || !inviteCode) { showAuthError('请填写所有字段（包括邀请码）'); return; }
     if (uname.length < 2) { showAuthError('用户名至少 2 个字符'); return; }
     if (pass.length < 6)  { showAuthError('密码至少 6 位'); return; }
     if (pass !== pass2)   { showAuthError('两次密码不一致'); return; }
     setAuthLoading(true);
-    firebase.auth().createUserWithEmailAndPassword(email, pass)
+    const db = firebase.firestore();
+    const codeRef = db.collection('invite_codes').doc(inviteCode);
+    codeRef.get()
+      .then(snap => {
+        if (!snap.exists) throw new Error('INVALID_CODE');
+        const data = snap.data();
+        if (data.used) throw new Error('CODE_USED');
+        return firebase.auth().createUserWithEmailAndPassword(email, pass);
+      })
       .then(uc => {
         State.user = uc.user;
         const np = { username:uname, score:0, totalAnswered:0, totalCorrect:0,
                      bestStreak:0, activeLevels:[1,2], wrongBank:{} };
         State.profile = np; LS.set('profile', np);
-        return firebase.firestore().collection('users').doc(uc.user.uid).set({
-          username: uname, email, score:0, totalAnswered:0, totalCorrect:0,
-          bestStreak:0, activeLevels:[1,2],
-          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-          lastActive: firebase.firestore.FieldValue.serverTimestamp(),
-        });
+        return Promise.all([
+          db.collection('users').doc(uc.user.uid).set({
+            username: uname, email, score:0, totalAnswered:0, totalCorrect:0,
+            bestStreak:0, activeLevels:[1,2],
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            lastActive: firebase.firestore.FieldValue.serverTimestamp(),
+          }),
+          codeRef.update({ used: true, usedBy: uc.user.uid, usedAt: firebase.firestore.FieldValue.serverTimestamp() }),
+        ]);
       })
       .then(() => {
         setAuthLoading(false);
@@ -411,7 +423,12 @@ function initAuth() {
         State.user = null;
         $('modal-register-success').classList.remove('hidden');
       })
-      .catch(e => { setAuthLoading(false); showAuthError(authErrMsg(e.code)); });
+      .catch(e => {
+        setAuthLoading(false);
+        if (e.message === 'INVALID_CODE') { showAuthError('邀请码无效，请确认后重试'); return; }
+        if (e.message === 'CODE_USED')    { showAuthError('该邀请码已被使用'); return; }
+        showAuthError(authErrMsg(e.code));
+      });
   };
 
   [$('login-email'), $('login-pass')].forEach(el =>
