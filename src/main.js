@@ -1297,6 +1297,14 @@ function bindEvents() {
     LS.set('speechVolume', State.speechVolume);
   });
   $('settings-test-btn').addEventListener('click', () => speak('안녕하세요! 한국어 받아쓰기 앱에 오신 것을 환영합니다.'));
+  $('settings-logout-btn').addEventListener('click', () => {
+    State.user = null;
+    State.profile = null;
+    localStorage.removeItem('kr_profile');
+    firebase.auth().signOut().catch(e => console.warn('signOut:', e));
+    showScreen('auth');
+  });
+
   $('settings-reset-btn').addEventListener('click', () => {
     if (!confirm('确定重置所有学习进度？此操作无法撤销。')) return;
     ['profile','speechRate','speechVolume'].forEach(k => localStorage.removeItem('kr_' + k));
