@@ -24,3 +24,4 @@ Thumbs.db
 
 # 原始词典文件（太大，不上传）
 scripts/krdict-raw/
+serviceAccountKey.json
