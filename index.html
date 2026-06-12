@@ -135,7 +135,7 @@
     <div class="level-cards-grid" id="level-cards-grid"></div>
 
     <!-- Mastery progress bar -->
-    <div class="mastery-wrap" id="mastery-wrap">
+    <div class="mastery-wrap" id="mastery-wrap" onclick="showScreen('mastered')" style="cursor:pointer">
       <div class="mastery-header">
         <span>词库掌握进度</span>
         <span class="mastery-count" id="mastery-text">0 / 0 词已掌握</span>
@@ -143,7 +143,7 @@
       <div class="mastery-bar-bg">
         <div class="mastery-bar-fill" id="mastery-bar-fill" style="width:0%"></div>
       </div>
-      <div class="mastery-sub" id="mastery-sub">连续答对同一个词 3 次即视为掌握，该词将从练习池移除</div>
+      <div class="mastery-sub" id="mastery-sub">累计答对同一个词 3 次即视为掌握，点击查看已掌握单词 →</div>
     </div>
 
     <!-- Practice mode selector -->
@@ -325,6 +325,27 @@
       <div class="empty-text">太棒了！暂无错题</div>
     </div>
     <div id="review-list"></div>
+  </div>
+</div>
+
+<!-- ================================================
+     SCREEN: MASTERED WORDS
+     ================================================ -->
+<div class="screen" id="screen-mastered">
+  <div class="top-header">
+    <button class="back-btn" onclick="showScreen('home')">←</button>
+    <span class="top-header-title">已掌握单词</span>
+    <span class="count-badge" id="mastered-count">0 个</span>
+  </div>
+  <div class="scroll-content">
+    <div id="mastered-start-wrap" class="hidden" style="margin-bottom:12px">
+      <button class="btn btn-primary" id="mastered-review-btn">▶ 开始复习已掌握单词</button>
+    </div>
+    <div id="mastered-empty" class="empty-state">
+      <div class="empty-icon">🌱</div>
+      <div class="empty-text">还没有掌握的单词，继续加油！</div>
+    </div>
+    <div id="mastered-list"></div>
   </div>
 </div>
 

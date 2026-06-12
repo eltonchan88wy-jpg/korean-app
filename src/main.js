@@ -195,20 +195,18 @@ function removeFromWrongBank(id) {
   saveWrongBank(bank);
 }
 
-// ── 掌握系统 ────────────────────────────────────────────────
+// ── 掌握系统（累计答对，答错不清零）────────────────────────
 function checkWordMastery(id) {
   const p = getProfile();
-  const streak = p.wordStreak || {};
-  streak[id] = (streak[id] || 0) + 1;
-  p.wordStreak = streak;
+  const tally = p.wordStreak || {};
+  tally[id] = (tally[id] || 0) + 1;
+  p.wordStreak = tally;
 
-  if (streak[id] >= 3) {
-    // 已掌握：加入 masteredWords，删除 wordStreak 记录
+  if (tally[id] >= 3) {
     const mastered = p.masteredWords || {};
     mastered[id] = true;
     p.masteredWords = mastered;
-    delete streak[id];
-    // 同时从错题库移除
+    delete tally[id];
     const bank = p.wrongBank || {};
     delete bank[id];
     p.wrongBank = bank;
@@ -218,20 +216,13 @@ function checkWordMastery(id) {
     updateMasteryProgress();
   } else {
     saveProfile(p);
-    // 提示剩余次数（仅第1、2次答对时）
-    if (streak[id] === 1) showFloatingXP('1/3 ✓');
-    else if (streak[id] === 2) showFloatingXP('2/3 ✓✓');
+    if (tally[id] === 1) showFloatingXP('1/3 ✓');
+    else if (tally[id] === 2) showFloatingXP('2/3 ✓✓');
   }
 }
 
-function resetWordStreak(id) {
-  const p = getProfile();
-  const streak = p.wordStreak || {};
-  if (streak[id]) {
-    delete streak[id];
-    p.wordStreak = streak;
-    saveProfile(p);
-  }
+function resetWordStreak() {
+  // 累计模式下答错不重置计数，保留空函数避免调用报错
 }
 
 function updateMasteryProgress() {
@@ -294,6 +285,7 @@ window.showScreen = function(name) {
   }
 
   const init = { home: initHome, practice: initPractice, review: initReview,
+                 mastered: initMastered,
                  friends: initFriends, profile: initProfile, settings: initSettings };
   init[name]?.();
 };
@@ -905,6 +897,27 @@ function initReview() {
 }
 
 // ────────────────────────────────────────────────────────────
+//  MASTERED SCREEN
+// ────────────────────────────────────────────────────────────
+function initMastered() {
+  const masteredIds = Object.keys(getProfile().masteredWords || {});
+  const words = masteredIds.map(id => State.allWords.find(w => w.id === id)).filter(Boolean);
+  $('mastered-count').textContent = `${words.length} 个`;
+  const list = $('mastered-list'), empty = $('mastered-empty'), wrap = $('mastered-start-wrap');
+  list.innerHTML = '';
+  if (!words.length) { empty.classList.remove('hidden'); wrap.classList.add('hidden'); return; }
+  empty.classList.add('hidden'); wrap.classList.remove('hidden');
+  words.forEach(w => {
+    const div = document.createElement('div');
+    div.className = 'review-item';
+    div.innerHTML = `<div style="flex:1"><div class="review-word">${w.korean}</div>
+      <div class="review-meaning">${POS_NAMES[w.pos]||w.pos} · ${w.meaning}</div></div>
+      <div style="font-size:0.75rem;color:var(--success);font-weight:600">已掌握 ✓</div>`;
+    list.appendChild(div);
+  });
+}
+
+// ────────────────────────────────────────────────────────────
 //  FRIENDS SCREEN
 // ────────────────────────────────────────────────────────────
 function initFriends() {
@@ -1278,6 +1291,14 @@ function bindEvents() {
     State.reviewQueue = Object.values(bank).filter(e => e.count > 0)
       .sort((a,b) => b.count - a.count).map(e => e.word);
     if (!State.reviewQueue.length) return;
+    showScreen('practice'); nextWord(true);
+  });
+
+  $('mastered-review-btn').addEventListener('click', () => {
+    const masteredIds = Object.keys(getProfile().masteredWords || {});
+    State.reviewQueue = masteredIds.map(id => State.allWords.find(w => w.id === id)).filter(Boolean);
+    if (!State.reviewQueue.length) return;
+    State.isReviewMode = true;
     showScreen('practice'); nextWord(true);
   });
 
