@@ -1475,6 +1475,8 @@ function prefetchSentence(w) {
 async function generateLevelSentence(w, korEl, chineseEl) {
   // 直接 await 已经在后台跑着的 Promise
   const entry = await (State.sentencePromise || prefetchSentence(w));
+  // 用户已跳到下一题，丢弃这道题的结果，避免覆盖新题的例句
+  if (State.currentWord !== w) return;
   const sentence    = entry.sentence    || '';
   const translation = entry.translation || '';
   korEl.textContent = sentence || '（例句生成失败，请重试）';
