@@ -94,6 +94,7 @@ function saveProfile(p) {
       masteredWords: p.masteredWords || {},
       masteredCount: Object.keys(p.masteredWords || {}).length,
       wrongBank: p.wrongBank || {},
+      wordStreak: p.wordStreak || {},
       lastActive: firebase.firestore.FieldValue.serverTimestamp(),
     }, { merge: true }).catch(e => console.warn('Firestore write:', e));
   }
@@ -327,7 +328,7 @@ async function loadUserProfile(uid) {
         studyStreak: d.studyStreak || local.studyStreak || 0,
         lastStudyDate: d.lastStudyDate || local.lastStudyDate || '',
         masteredWords: d.masteredWords || local.masteredWords || {},
-        wordStreak: local.wordStreak || {},
+        wordStreak: d.wordStreak || local.wordStreak || {},
       };
       LS.set('profile', State.profile);
     }
